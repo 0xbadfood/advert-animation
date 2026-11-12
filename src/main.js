@@ -1,7 +1,7 @@
 import { World } from "./world/world.js";
 import { Emulator } from "./emulator/emulator.js";
 import { loadFilm } from "./emulator/real.js";
-import { tryLoadCast } from "./world/models.js";
+import { tryLoadCast, tryLoadSet } from "./world/models.js";
 import { STAGES } from "./story/stages.js";
 import { LIMITS } from "./emulator/metrics.js";
 
@@ -198,7 +198,7 @@ function frame(now) {
 async function start() {
   try { await Promise.race([Promise.all([document.fonts.load("800 20px Nunito"), document.fonts.load("700 20px 'Noto Sans Devanagari'", "हिंदी")]), new Promise((r) => setTimeout(r, 2500))]); } catch (e) { /* fonts are a nicety */ }
   emu.speed = +(qs.get("speed") || $("#speed").value); $("#speed").value = String(emu.speed);
-  if (!qs.get("greybox")) emu.cast = await tryLoadCast();      // the Blender figurines; ?greybox=1 for the primitives
+  if (!qs.get("greybox")) [emu.cast, emu.set] = await Promise.all([tryLoadCast(), tryLoadSet()]);   // Blender cast and set; ?greybox=1 for neither
   requestAnimationFrame(frame);
 
   // a dummy preset (tools/smoke.py, offline): the generated set, no film

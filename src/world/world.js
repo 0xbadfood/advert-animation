@@ -1,15 +1,22 @@
 import * as THREE from "three";
 import { makeVerbs } from "../story/runner.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { THEMES, STATION_ORDER, themeAt, blendAt } from "./themes.js";
 
 // The studio: one scene, stations laid out left to right along x, a camera "focus" that trucks between station
 // framings, and the views that render it (a desktop page: 16:9; phones are out of scope, DESIGN.md section 5).
 export const STATION_GAP = 13;
+export const ZOOM = 0.85, LOWER = 0.06;     // the station framings, tightened so the figurines read as the stars
 export const PALETTE = { floor: 0xe2d8fb, wall: 0xf1eaff, rug: 0xcfc0f7, violet: 0x5b3fd1, gold: 0xffc857, lilac: 0xb9a6f2, wood: 0xc79a6b, desk: 0xf6f2ff };
 
 export class World {
   // cast: the Blender figurine templates by role (world/models.js), or null for the greybox figures
-  constructor(runner, views = [], cast = null) {
-    this.cast = cast;
+  constructor(runner, views = [], cast = null, set = null) {
+    this.cast = cast; this.setTemplate = set;
     this.runner = runner; this.V = makeVerbs(runner);
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xeee6ff);
@@ -22,7 +29,7 @@ export class World {
 
   buildStudio() {
     const s = this.scene;
-    s.add(new THREE.HemisphereLight(0xf5efff, 0xb9a6f2, 1.25));
+    this.hemi = new THREE.HemisphereLight(0xf5efff, 0xb9a6f2, 1.25); s.add(this.hemi);
     const key = (this.key = new THREE.DirectionalLight(0xfff4e6, 2.1));
     key.position.set(-6, 12, 9); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
     const sc = key.shadow.camera; sc.left = -9; sc.right = 9; sc.top = 9; sc.bottom = -9; sc.near = 1; sc.far = 40; key.shadow.bias = -0.0004; key.shadow.radius = 4;
@@ -30,18 +37,29 @@ export class World {
     const rim = new THREE.DirectionalLight(0xffd59a, 0.9); rim.position.set(5, 6, -8); s.add(rim);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshStandardMaterial({ color: PALETTE.floor, roughness: 0.9 }));
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; s.add(floor);
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(200, 14), new THREE.MeshStandardMaterial({ color: PALETTE.wall, roughness: 0.95 }));
-    wall.position.set(60, 7, -4.2); wall.receiveShadow = true; s.add(wall);
-    // tall windows on the back wall, one pair per station, for rhythm
-    const winM = new THREE.MeshBasicMaterial({ color: 0xfbf8ff, toneMapped: false });
-    for (let i = -1; i < 9; i++) for (const dx of [-3.8, 3.8]) {
-      const w = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.6), winM); w.position.set(i * STATION_GAP + dx, 5.4, -4.18); s.add(w);
+    // one wall per station in its theme, a lacquered pillar between stations, a skirting along the bottom
+    STATION_ORDER.forEach((name, i) => {
+      const th = THEMES[name], x = i * STATION_GAP;
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(STATION_GAP, 14), new THREE.MeshStandardMaterial({ color: th.wall, roughness: 0.92 }));
+      wall.position.set(x, 7, -4.2); wall.receiveShadow = true; s.add(wall);
+      const skirt = new THREE.Mesh(new THREE.BoxGeometry(STATION_GAP, 0.24, 0.08), new THREE.MeshStandardMaterial({ color: th.accent, roughness: 0.5 }));
+      skirt.position.set(x, 0.12, -4.14); s.add(skirt);
+    });
+    const pillarM = new THREE.MeshPhysicalMaterial({ color: 0xfbf8ff, roughness: 0.3, clearcoat: 0.6 });
+    for (let i = -1; i < STATION_ORDER.length; i++) {
+      const p = new THREE.Mesh(new RoundedBoxGeometry(0.9, 14, 0.7, 4, 0.12), pillarM);
+      p.position.set(i * STATION_GAP + STATION_GAP / 2, 7, -4.0); p.castShadow = p.receiveShadow = true; s.add(p);
     }
+    if (this.setTemplate) s.add(this.setTemplate.clone(true));      // the Blender set dressing (blender/set.py)
+    // the sky and the fog follow the station the camera is at
+    this.skyA = new THREE.Color(); this.skyB = new THREE.Color();
   }
+
+  themeAt(x) { return themeAt(x, STATION_GAP); }
 
   // a round rug that marks a station
   rug(x, r = 4.2) {
-    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshStandardMaterial({ color: PALETTE.rug, roughness: 0.95 }));
+    const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshStandardMaterial({ color: this.themeAt(x).rug, roughness: 0.95 }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.005, 0); m.receiveShadow = true; this.scene.add(m); return m;
   }
 
@@ -55,7 +73,7 @@ export class World {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.0;   // neutral: base colours (the cards) stay faithful through the bloom pass
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     return { canvas, renderer, camera: new THREE.PerspectiveCamera(32, 1, 0.1, 100) };
   }
@@ -74,13 +92,14 @@ export class World {
   frame(v) {
     const W = v.canvas.clientWidth || 16, H = v.canvas.clientHeight || 9, aspect = W / H;
     v.renderer.setSize(W, H, false); v.camera.aspect = aspect;
-    const f = this.focus, bw = f.w, bh = f.h;
+    const f = this.focus, bw = f.w * ZOOM, bh = f.h * ZOOM;
     const vfov = THREE.MathUtils.degToRad(v.camera.fov);
     const distH = bh / 2 / Math.tan(vfov / 2), distW = bw / 2 / (Math.tan(vfov / 2) * aspect);
     const dist = Math.max(distH, distW) + 0.5;
     const dir = new THREE.Vector3(0, 0.3, 1).normalize();
-    v.camera.position.set(f.x + dir.x * dist, f.y + dir.y * dist, f.z + dir.z * dist);
-    v.camera.lookAt(f.x, f.y, f.z);
+    const fy = f.y - LOWER;
+    v.camera.position.set(f.x + dir.x * dist, fy + dir.y * dist, f.z + dir.z * dist);
+    v.camera.lookAt(f.x, fy, f.z);
     v.camera.updateProjectionMatrix();
   }
 
@@ -98,9 +117,27 @@ export class World {
     for (const f of this.figures) f.apply(t);
     for (const u of this.updaters) u(t);
     this.key.position.set(this.focus.x - 6, 12, 9); this.key.target.position.set(this.focus.x, 0, 0);
+    const [a, b, k] = blendAt(this.focus.x, STATION_GAP, "sky");
+    this.skyA.setHex(a).lerp(this.skyB.setHex(b), k);
+    this.scene.background.copy(this.skyA); this.scene.fog.color.copy(this.skyA);
   }
 
-  render() { for (const v of this.views) { this.frame(v); v.renderer.render(this.scene, v.camera); } }
+  // bloom: only pixels brighter than white glow (emissive bulbs, signs), so cards at plain white never halo
+  render() {
+    for (const v of this.views) {
+      this.frame(v);
+      if (!v.composer) {
+        v.composer = new EffectComposer(v.renderer);
+        v.renderPass = new RenderPass(this.scene, v.camera); v.composer.addPass(v.renderPass);
+        v.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.45, 1.05); v.composer.addPass(v.bloom);
+        v.composer.addPass(new OutputPass());
+      }
+      v.renderPass.scene = this.scene; v.renderPass.camera = v.camera;
+      const W = v.canvas.clientWidth || 16, H = v.canvas.clientHeight || 9, pr = v.renderer.getPixelRatio();
+      if (v.size !== W + "x" + H) { v.composer.setSize(W, H); v.composer.setPixelRatio(pr); v.size = W + "x" + H; }
+      v.composer.render();
+    }
+  }
 
   reportOverflow(slot, text) { this.overflows.push({ slot, text, t: this.runner.t }); if (this.onOverflow) this.onOverflow(slot, text); }
 

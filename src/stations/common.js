@@ -3,8 +3,12 @@ import { Slot } from "../world/slot.js";
 
 // Helpers every station uses: placed slots, a slot that is a free-flying card, easels and boards.
 
-export function panel(world, name, { x, y, z, w, h, rotY = 0, kind = "card", placeholder = "", px = 360, frame = true, frameColor, transparent = false, hidden = false, glow = false }) {
-  const s = new Slot(world, name, { w, h, kind, placeholder, px, frame, frameColor, transparent, glow });
+// panels that float in the air drift a little; boards, easels, screens and the phone stay put
+const FLOATING = /^(site_|logo|palette|fact|market|checklist|notes|angles|hook_|pairs|chosen|wave_|wav|in_|gallery_|poster)/;
+
+export function panel(world, name, { x, y, z, w, h, rotY = 0, kind = "card", placeholder = "", px = 360, frame = true, frameColor, transparent = false, hidden = false, glow = false, float, accent }) {
+  const s = new Slot(world, name, { w, h, kind, placeholder, px, frame, frameColor, transparent, glow,
+    accent: accent === undefined ? world.themeAt(x).accent : accent, float: float ?? FLOATING.test(name || "") });
   s.group.position.set(x, y, z); s.group.rotation.y = rotY;
   world.scene.add(s.group);
   if (hidden) s.group.visible = false;

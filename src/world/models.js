@@ -31,4 +31,22 @@ export async function tryLoadCast() {
 }
 
 export function cloneFigure(template) { return template.clone(true); }
+
+// the set dressing (blender/set.py -> public/models/set.glb): one group per station, placed in world coordinates
+let setCache = null;
+export function loadSet(url = "/models/set.glb") {
+  if (setCache) return setCache;
+  setCache = new GLTFLoader().loadAsync(url).then((g) => {
+    g.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = false; o.receiveShadow = true; o.userData.shared = true;
+      if (o.material) o.material.userData.shared = true;
+    });
+    return g.scene;
+  });
+  return setCache;
+}
+export async function tryLoadSet() {
+  try { return await loadSet(); } catch (e) { console.warn("set dressing not loaded", e); return null; }
+}
 void THREE;

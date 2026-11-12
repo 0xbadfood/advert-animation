@@ -208,7 +208,17 @@ Findings so far (greybox, 2026-11-12):
    from their parts. *(Done 2026-11-13: `blender/kit.py` + `blender/cast.py` build all seven in ~7 s; the runtime
    uses them when `public/models/cast/*.glb` load, else the greybox. Joints are axis-free pivots, so every beat plays
    unchanged. Open: the cast is about 4.6 MB (compress), and the figurines read small in the station framings.)*
-4. **The final set and look**, station by station, each checked against every scenario. First item: frame the
-   stations so the figurines are the stars (they read small at the greybox framings).
+4. **The final set and look**, station by station, each checked against every scenario. *(First pass done
+   2026-11-13.)*
+   - Cards are layered: a thick lacquered card with rounded edges on the station's accent backing. Floating panels
+     drift, and a reveal pops the card out toward the camera, turns it over and settles it back.
+   - Each station has a theme (`src/world/themes.js`): its own wall, rug and accent, with white pillars between
+     stations and a sky that blends as the camera trucks.
+   - Set dressing comes from `blender/set.py` (`public/models/set.glb`, one group per station: shelves, globe, string
+     lights, cork board, round window, trophy, spotlights, posters, foam, ON AIR, canvases, jars, curtains, marquee
+     bulbs, plants).
+   - Bloom touches only pixels brighter than white, with neutral tone mapping, so cards keep their colours.
+   - Framing is tightened (`ZOOM` 0.85).
+   - Open: compress the models (cast + set about 5.3 MB).
 5. **The new pipeline events in `~/advert`**, where the emulator shows the blind waits hurt.
 6. **Wire into the story page** as the default renderer behind the existing `LiveSource`.
