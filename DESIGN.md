@@ -205,7 +205,10 @@ Findings so far (greybox, 2026-11-12):
    Ubuntu Blender 4.0.2, CPU bakes, GLB with skeleton, clips and baked AO plays in Three.js. Findings and gotchas
    in `blender/NOTES.md`.)*
 3. **Figurine kit in bpy:** the shared rig, the pose library, then the three leads, then four crew members built
-   from their parts.
-4. **The final set and look**, station by station, each checked against every scenario.
+   from their parts. *(Done 2026-11-13: `blender/kit.py` + `blender/cast.py` build all seven in ~7 s; the runtime
+   uses them when `public/models/cast/*.glb` load, else the greybox. Joints are axis-free pivots, so every beat plays
+   unchanged. Open: the cast is about 4.6 MB (compress), and the figurines read small in the station framings.)*
+4. **The final set and look**, station by station, each checked against every scenario. First item: frame the
+   stations so the figurines are the stars (they read small at the greybox framings).
 5. **The new pipeline events in `~/advert`**, where the emulator shows the blind waits hurt.
 6. **Wire into the story page** as the default renderer behind the existing `LiveSource`.

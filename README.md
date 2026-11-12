@@ -8,7 +8,11 @@ source ~/.nvm/nvm.sh && npm install
 npm run dev                                   # the emulator on http://localhost:5190
 ~/advert/.venv/bin/python tools/smoke.py      # every preset headless: the checks, exit 1 on a problem
 ~/advert/.venv/bin/python tools/smoke.py --only cloud-fast --shots 0.1,0.5,0.97   # plus screenshots in out/smoke/
+blender -b --factory-startup -P blender/cast.py -- --out public/models/cast      # rebuild the seven figurines (~7 s)
 ```
+
+Pages: `/` the emulator (`?greybox=1` for the primitive figures), `/cast.html` the cast lineup cycling the pose
+library (`?pose=<name>` holds one), `/spike.html` the Blender spike. Blender notes: `blender/NOTES.md`.
 
 | path | what |
 |---|---|

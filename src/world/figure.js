@@ -38,7 +38,35 @@ export class Figure {
     this.j = { ...REST }; this.blinkSeed = (spec.seed || 1) * 1.37;
     const root = (this.root = new THREE.Group()); root.name = "fig:" + spec.name;
     const s = spec.scale || 1; root.scale.setScalar(s);
+    this.hopRest = 0.08;
+    const model = world.cast && world.cast[spec.name];
+    if (model) this.fromModel(model);
+    else this.greybox(spec);
+    this.apply(0);
+    world.scene.add(root);
+    world.figures.push(this);
+  }
 
+  // the Blender figurine (blender/cast.py): its joints are axis-free pivots named like ours, so apply() drives them
+  // exactly as it drives the greybox; the mouth and eyes keep their rest transforms as the zero point
+  fromModel(template) {
+    const m = template.clone(true); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); this.root.add(m);
+    const g = (n) => m.getObjectByName(n);
+    this.model = m;
+    this.hop = g("hop"); this.body = g("body"); this.head = g("head");
+    this.hopRest = this.hop.position.y;
+    this.arms = {};
+    for (const side of ["L", "R"]) {
+      this.arms[side] = { sh: g("shoulder_" + side), el: g("elbow_" + side), hand: g("hand_" + side) };
+      this.arms[side].sh.rotation.order = "ZXY";
+    }
+    this.eyes = [g("eye_L"), g("eye_R")];
+    this.eyeRest = this.eyes.map((e) => e.scale.y);
+    this.mouth = g("mouth"); this.mouthRest = this.mouth.position.y;
+  }
+
+  greybox(spec) {
+    const root = this.root;
     // base: a round lacquered stand with a gold rim (it reads "figurine")
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.08, 40), toon(spec.base || 0x3b2f73, 0.25));
     base.position.y = 0.04; base.castShadow = base.receiveShadow = true; root.add(base);
@@ -77,9 +105,6 @@ export class Figure {
       const mitten = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), toon(spec.skin, 0.45)); hand.add(mitten);
       this.arms[side] = { sh, el, hand };
     }
-    this.apply(0);
-    world.scene.add(root);
-    world.figures.push(this);
   }
 
   addHair(spec) {
@@ -101,7 +126,7 @@ export class Figure {
   apply(t) {
     const j = this.j, spec = this.spec;
     const breath = Math.sin(t * 2.1 + this.blinkSeed) * 0.012;
-    this.hop.position.y = 0.08 + j.hop;
+    this.hop.position.y = this.hopRest + j.hop;
     const sq = j.squash;
     this.body.scale.set(1 + sq * 0.5, 1 - sq + breath, 1 + sq * 0.5);
     this.body.rotation.set(j.lean, 0, j.side);
@@ -109,10 +134,10 @@ export class Figure {
     // blink: a quick close every few seconds, stable per figure
     const ph = (t + this.blinkSeed * 3.1) % 3.7;
     const blink = ph < 0.12 ? 1 - Math.abs(ph - 0.06) / 0.06 : 0;
-    this.eyes.forEach((e) => { e.scale.y = Math.max(0.12, 1 - blink); });
+    this.eyes.forEach((e, i) => { e.scale.y = Math.max(0.12, 1 - blink) * (this.eyeRest ? this.eyeRest[i] : 1); });
     const sm = j.smile;
     this.mouth.rotation.z = sm >= 0 ? Math.PI : 0; this.mouth.scale.set(1, 0.4 + Math.abs(sm) * 0.8, 1);
-    this.mouth.position.y = sm >= 0 ? 0.175 : 0.15;
+    this.mouth.position.y = this.model ? this.mouthRest + (sm >= 0 ? 0 : -0.02) : sm >= 0 ? 0.175 : 0.15;
     for (const side of ["L", "R"]) {
       const a = this.arms[side], sx = side === "L" ? 1 : -1;
       a.sh.rotation.x = -j["s" + side]; a.sh.rotation.z = sx * j["r" + side];

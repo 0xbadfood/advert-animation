@@ -7,7 +7,9 @@ export const STATION_GAP = 13;
 export const PALETTE = { floor: 0xe2d8fb, wall: 0xf1eaff, rug: 0xcfc0f7, violet: 0x5b3fd1, gold: 0xffc857, lilac: 0xb9a6f2, wood: 0xc79a6b, desk: 0xf6f2ff };
 
 export class World {
-  constructor(runner, views = []) {
+  // cast: the Blender figurine templates by role (world/models.js), or null for the greybox figures
+  constructor(runner, views = [], cast = null) {
+    this.cast = cast;
     this.runner = runner; this.V = makeVerbs(runner);
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xeee6ff);
@@ -60,9 +62,10 @@ export class World {
 
   dispose() {
     this.scene.traverse((o) => {
+      if (o.userData.shared) return;                       // the cast's templates outlive any one world
       if (o.geometry) o.geometry.dispose();
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      ms.forEach((m) => { if (m.map) m.map.dispose(); m.dispose(); });
+      ms.forEach((m) => { if (m.userData.shared) return; if (m.map) m.map.dispose(); m.dispose(); });
     });
     for (const v of this.views) v.renderer.renderLists.dispose();
   }
