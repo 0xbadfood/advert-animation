@@ -1,0 +1,14 @@
+# The story emulator (Vite dev server) on :5190. User unit: ~/.config/systemd/user/advert-animation.service
+# Public name: https://adanime.photovault.live (Caddy on the VPN master 10.8.0.1 -> 10.8.0.4:5190).
+[Unit]
+Description=advert-animation: the story emulator
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/advert-animation
+ExecStart=/bin/bash -lc 'source %h/.nvm/nvm.sh && exec npx vite'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

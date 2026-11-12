@@ -1,0 +1,48 @@
+{
+ "seed": 7,
+ "start": "digest",
+ "language": "hinglish",
+ "newEvents": true,
+ "policy": {
+  "hooks": "line",
+  "pick": "name"
+ },
+ "stages": {
+  "research": {
+   "duration": 60,
+   "screenshots": 2
+  },
+  "truths": {
+   "duration": 75,
+   "n": 9
+  },
+  "concepts": {
+   "duration": 29,
+   "n": 8,
+   "pattern": "burst"
+  },
+  "judge": {
+   "duration": 10,
+   "pairs": 56
+  },
+  "direction": {
+   "duration": 70,
+   "scenes": 7
+  },
+  "audio": {
+   "duration": 32
+  },
+  "visuals": {
+   "duration": 20,
+   "stills": 8,
+   "clips": 0,
+   "pattern": "burst"
+  },
+  "render": {
+   "duration": 50
+  }
+ },
+ "fail": null,
+ "name": "hinglish-slow",
+ "note": "Worst-case LLM stages, Hinglish hooks (Devanagari in the bubbles and cards)."
+}

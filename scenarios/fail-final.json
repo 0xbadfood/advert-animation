@@ -1,0 +1,52 @@
+{
+ "seed": 7,
+ "start": "digest",
+ "language": "en",
+ "newEvents": true,
+ "policy": {
+  "hooks": "line",
+  "pick": "name"
+ },
+ "stages": {
+  "research": {
+   "duration": 60,
+   "screenshots": 2
+  },
+  "truths": {
+   "duration": 45,
+   "n": 9
+  },
+  "concepts": {
+   "duration": 22,
+   "n": 8,
+   "pattern": "burst"
+  },
+  "judge": {
+   "duration": 10,
+   "pairs": 56
+  },
+  "direction": {
+   "duration": 35,
+   "scenes": 7
+  },
+  "audio": {
+   "duration": 28
+  },
+  "visuals": {
+   "duration": 150,
+   "stills": 8,
+   "clips": 2,
+   "pattern": "spread"
+  },
+  "render": {
+   "duration": 160
+  }
+ },
+ "fail": {
+  "stage": "truths",
+  "at": 1,
+  "retry": false
+ },
+ "name": "fail-final",
+ "note": "The batch fails after the angles and the chain gives up."
+}

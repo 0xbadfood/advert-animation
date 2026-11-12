@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Emulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Noto+Sans+Devanagari:wght@600;700;800&display=swap">
+<style>
+  :root { --bg: #f4f1fb; --panel: #ffffff; --ink: #26214a; --muted: #7d77a3; --line: #e3ddf6; --accent: #5b3fd1; --warn: #c2410c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 "Nunito", system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  .wrap { max-width: 1480px; margin: 0 auto; padding: 12px 16px 32px; display: grid; gap: 12px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 900; }
+  .sub { color: var(--muted); margin: 0; }
+
+  /* the stage: the canvas, with the phone preview beside it */
+  #views { display: flex; gap: 12px; align-items: flex-start; }
+  .view { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .view canvas { display: block; width: 100%; height: 100%; }
+  #wide { flex: 1 1 auto; aspect-ratio: 16 / 9; min-width: 0; }
+  #tall { flex: 0 0 auto; aspect-ratio: 9 / 16; width: 21%; min-width: 150px; }
+  body.nophone #tall { display: none; }
+  .cap { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(38,33,74,.85); color: #fff; padding: 6px 16px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
+  #tall .cap { font-size: 11px; white-space: normal; text-align: center; width: 88%; padding: 4px 8px; }
+  .honest { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: rgba(255,255,255,.93); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; width: max-content; max-width: 92%; text-align: center; }
+  #tall .honest { font-size: 10px; }
+  .honest:empty, .cap:empty { display: none; }
+
+  /* transport */
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  button, select, input, textarea { font: inherit; color: var(--ink); }
+  button { cursor: pointer; font-weight: 800; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); min-width: 96px; font-size: 15px; }
+  select, input[type=number], input[type=text], textarea { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  #clock { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 120px; }
+  #note { color: var(--muted); font-size: 13px; flex: 1 1 280px; }
+  #timeline { width: 100%; height: 112px; background: #fff; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; display: block; }
+
+  /* the run: film picker and one slider per stage */
+  #run { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  #run h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  #film { width: 100%; font-size: 14px; }
+  #filmInfo { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  #filmInfo b { color: var(--ink); }
+  .profiles { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .sl { display: grid; grid-template-columns: 150px 1fr 150px; gap: 10px; align-items: center; margin: 3px 0; }
+  .sl label { font-weight: 800; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .sl .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .sl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .sl .val { font-variant-numeric: tabular-nums; font-size: 13px; }
+  .sl .val b { font-size: 14px; }
+  .sl .val span { color: var(--muted); }
+  #loading { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(244,241,251,.8); font-weight: 800; font-size: 16px; }
+  body.loading #loading { display: flex; }
+  /* the reveal: the finished ad in a modal, the end of the flow */
+  #reveal { position: fixed; inset: 0; background: rgba(28,22,60,.72); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  #reveal.open { display: flex; }
+  #reveal .box { background: #fff; border-radius: 16px; padding: 16px; display: grid; gap: 10px; max-height: 96vh; width: min(420px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+  #reveal h2 { margin: 0; font-size: 18px; font-weight: 900; }
+  #reveal p { margin: 0; color: var(--muted); font-size: 13px; }
+  #reveal video { width: 100%; max-height: 70vh; aspect-ratio: 9 / 16; background: #000; border-radius: 10px; object-fit: contain; }
+  #reveal .acts { display: flex; gap: 8px; justify-content: flex-end; }
+  #reveal a.btn { text-decoration: none; color: var(--ink); font-weight: 800; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px; }
+  @media (max-width: 900px) { #run { grid-template-columns: 1fr; } .sl { grid-template-columns: 110px 1fr 110px; } }
+  /* stage cards */
+  #cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .card h3 { margin: 0 0 8px; font-size: 15px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+  .card h3 .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .card h3 .hint { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--muted); }
+  .f { display: grid; grid-template-columns: 104px 1fr; gap: 8px; align-items: center; margin: 5px 0; }
+  .f > label { font-weight: 700; font-size: 13px; color: var(--muted); }
+  .f input[type=number] { width: 90px; }
+  .f input[type=text], .f textarea, .f select { width: 100%; }
+  .f textarea { min-height: 84px; resize: vertical; font-size: 13px; }
+  .f .files { font-size: 12px; color: var(--muted); }
+  .pal { display: flex; gap: 4px; } .pal input { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 4px; }
+
+  .checks { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child, td.l { text-align: left; }
+  th { color: var(--muted); font-weight: 800; }
+  td.bad { color: var(--warn); font-weight: 800; }
+  #warnings { margin: 8px 0 0; padding-left: 18px; }
+  #warnings li.lag, #warnings li.short, #warnings li.repeat, #warnings li.overflow { color: var(--warn); font-weight: 700; }
+  #warnings li.info { color: var(--muted); }
+  #log { font: 12px/1.5 ui-monospace, monospace; max-height: 240px; overflow: auto; white-space: pre; }
+  @media (max-width: 900px) { #views { flex-direction: column; } #tall { width: 55%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div><h1>Story emulator</h1><p class="sub">Pick a finished film and set each stage's length, then Play: the emulator sends that run's signals and its real artifacts to the story at the set times.</p></div>
+  <div id="views">
+    <div class="view" id="wide"><canvas></canvas><div class="cap"></div><div class="honest"></div><div id="loading">loading the film…</div></div>
+    <div class="view" id="tall"><canvas></canvas><div class="cap"></div><div class="honest"></div></div>
+  </div>
+  <div class="bar">
+    <button id="play" class="primary">Play</button>
+    <button id="restart">Restart</button>
+    <label>speed <select id="speed"><option>1</option><option>2</option><option>5</option><option selected>10</option><option>20</option><option>50</option></select></label>
+    <span id="clock">0.0 s</span>
+    <label><input type="checkbox" id="phone" checked> phone preview</label>
+    <span id="note"></span>
+  </div>
+  <canvas id="timeline" title="pipeline stages (top), story stages (middle), signals (bottom); click to seek"></canvas>
+  <div id="run">
+    <div>
+      <h3>Film</h3>
+      <select id="film" aria-label="finished film"></select>
+      <div id="filmInfo"></div>
+      <div class="profiles"><button id="pReal">Real timing</button><button id="pCloud">Cloud timing</button></div>
+    </div>
+    <div><h3>Stage lengths <span style="text-transform:none;letter-spacing:0;font-weight:700">· drag to compress or stretch a stage</span></h3><div id="sliders"></div></div>
+  </div>
+  <div class="card checks"><h3>Checks <span class="hint">lag budget 8 s · readable stage 3 s · beat repeats 6</span></h3><table id="table"></table><ul id="warnings"></ul></div>
+  <details class="card"><summary><b>Signals sent</b></summary><div id="log"></div></details>
+</div>
+<div id="reveal" role="dialog" aria-modal="true" aria-labelledby="revealTitle">
+  <div class="box">
+    <h2 id="revealTitle">Your film is ready</h2>
+    <p id="revealSub"></p>
+    <video id="revealVideo" controls playsinline preload="auto"></video>
+    <div class="acts"><a class="btn" id="revealDownload" download>Download</a><button id="revealReplay">Watch the story again</button><button class="primary" id="revealClose">Close</button></div>
+  </div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

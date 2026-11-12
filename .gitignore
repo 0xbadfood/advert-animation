@@ -1,0 +1,4 @@
+node_modules/
+dist/
+out/
+.api_key
