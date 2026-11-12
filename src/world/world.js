@@ -129,6 +129,45 @@ export class World {
     yield* this.V.tween(dur, (t) => { for (const k of Object.keys(b)) this.focus[k] = a[k] + (b[k] - a[k]) * t; });
   }
 
+  // Where a screen overlay (a story card) covers the least of a station: its panels, boards and figures are projected
+  // through the station's own framing, each candidate spot (top-left corner, fractions of the view) is scored by the
+  // weighted area it would cover, the emptiest wins. w, h: the overlay's size as fractions of the view.
+  freeSpot(stationName, w, h, cands) {
+    const st = this.stations[stationName], v = this.views[0];
+    if (!st || !v) return cands[0];
+    const save = { ...this.focus };
+    Object.assign(this.focus, st.framing); this.frame(v);
+    const cam = v.camera, rects = [];
+    const box = new THREE.Box3(), p = new THREE.Vector3();
+    const project = (obj, weight) => {
+      box.setFromObject(obj);
+      if (box.isEmpty()) return;
+      let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+      for (let i = 0; i < 8; i++) {
+        p.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(cam);
+        const sx = (p.x + 1) / 2, sy = (1 - p.y) / 2;
+        x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
+      }
+      rects.push([Math.max(0, x0), Math.max(0, y0), Math.min(1, x1), Math.min(1, y1), weight]);
+    };
+    const near = (o) => { o.getWorldPosition(p); return Math.abs(p.x - st.x) < 7; };
+    for (const sl of Object.values(this.slots)) if (sl.group.visible && near(sl.group)) project(sl.group, 2);
+    for (const f of this.figures) if (f.root.visible && near(f.root)) project(f.root, 3);
+    rects.push([0.25, 0.55, 0.75, 0.98, 1.5]);            // where the figures act, even before they enter
+    Object.assign(this.focus, save); this.frame(v);
+    let best = cands[0], bestScore = Infinity;
+    for (const c of cands) {
+      let score = 0;
+      for (const [x0, y0, x1, y1, wt] of rects) {
+        const ox = Math.max(0, Math.min(c.x + w, x1) - Math.max(c.x, x0)), oy = Math.max(0, Math.min(c.y + h, y1) - Math.max(c.y, y0));
+        score += ox * oy * wt;
+      }
+      score += (c.bias || 0) * w * h;                       // a slight preference order among equally empty spots
+      if (score < bestScore - 1e-6) { best = c; bestScore = score; }
+    }
+    return { ...best, score: bestScore };
+  }
+
   jumpTo(stationName) { const st = this.stations[stationName]; if (st) { Object.assign(this.focus, st.framing); this.cameraStation = stationName; } }
 
   update(t) {

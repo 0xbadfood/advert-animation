@@ -2,8 +2,9 @@ import { World } from "./world/world.js";
 import { Emulator } from "./emulator/emulator.js";
 import { loadFilm } from "./emulator/real.js";
 import { tryLoadCast, tryLoadSet, tryLoadProps } from "./world/models.js";
-import { StoryCard, STORY_CARD_CSS } from "./ui/storycard.js";
+import { StoryCard, STORY_CARD_CSS, spots, spotAt } from "./ui/storycard.js";
 import { cardFor, StatusTracker } from "./story/narration.js";
+import { STATION_OF } from "./story/stages.js";
 import { STAGES } from "./story/stages.js";
 import { LIMITS } from "./emulator/metrics.js";
 
@@ -22,8 +23,17 @@ const views = ["#wide"].map((id) => ({ ...World.makeView($(id + " canvas")), roo
 // the story card explains each step over the canvas, with a live status from the signals (story/narration.js)
 document.head.appendChild(Object.assign(document.createElement("style"), { textContent: STORY_CARD_CSS }));
 const card = new StoryCard($("#wide")), tracker = new StatusTracker();
+// the card goes where this station's set is emptiest (the layout is fixed per station, so the world can tell)
+let placingStage = null;
+card.placer = () => {
+  const world = emu.player && emu.player.world, st = STATION_OF[placingStage];
+  if (!world || !st) return null;
+  const full = card.size(false), strip = card.size(true), chosen = world.stations[st] && world.stations[st].cards;
+  if (chosen) return { full: spotAt(chosen.full, full.w, full.h), strip: spotAt(chosen.strip, strip.w, strip.h) };   // picked by eye per station
+  return { full: world.freeSpot(st, full.w, full.h, spots(full.w, full.h)), strip: world.freeSpot(st, strip.w, strip.h, spots(strip.w, strip.h)) };
+};
 const emu = new Emulator(views, {
-  onStage: (stage, fast) => { const c = cardFor(stage); if (!c) return; card.show(c, { animate: !fast }); card.status(tracker.for(c.key)); },
+  onStage: (stage, fast) => { const c = cardFor(stage); if (!c) return; placingStage = stage; card.status(tracker.for(c.key)); card.show(c, { animate: !fast }); },
   onSignal: (stage, e) => { const r = tracker.feed(e); if (r && r.card === card.key) card.status(r.text); },
   onReset: () => { card.reset(); tracker.reset(); },
 });

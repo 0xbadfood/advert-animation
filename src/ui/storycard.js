@@ -4,7 +4,23 @@ import { STEPS } from "../story/narration.js";
 // revealed word by word, a plain explanation and a live status; after a few seconds it settles into a compact pill
 // in the corner (the status keeps updating) so it never covers a long wait. Catch-up (seek, late load) shows the
 // current step compact, without the entrance.
-const HOLD_MS = 5200;
+const HOLD_MS = 4200;
+// a named spot (tl tc tr ml mr bl bc br) or an explicit {x, y} -> the card's top-left corner as fractions of the view
+export function spotAt(name, w, h) {
+  if (name && typeof name === "object") return name;
+  const m = 0.02, xs = { l: m, c: 0.5 - w / 2, r: 1 - w - m }, ys = { t: 0.04, m: 0.5 - h / 2, b: 1 - h - 0.035 };
+  return { x: xs[name[1]] ?? m, y: ys[name[0]] ?? 0.04 };
+}
+
+// candidate spots (top-left corner, fractions of the view) for a card of size w x h; the page scores them per station
+export function spots(w, h) {
+  const m = 0.02, top = 0.04, bot = 1 - h - 0.035;
+  return [
+    { x: m, y: top, bias: 0 }, { x: 1 - w - m, y: top, bias: 0.02 }, { x: 0.5 - w / 2, y: top, bias: 0.04 },
+    { x: m, y: bot, bias: 0.06 }, { x: 1 - w - m, y: bot, bias: 0.06 }, { x: 0.5 - w / 2, y: bot, bias: 0.08 },
+    { x: m, y: 0.5 - h / 2, bias: 0.1 }, { x: 1 - w - m, y: 0.5 - h / 2, bias: 0.1 },
+  ];
+}
 
 export class StoryCard {
   constructor(host) {
@@ -22,8 +38,19 @@ export class StoryCard {
       </div>
       <div class="sc-rail">${STEPS.map((s) => `<b data-n="${s.n}"></b>`).join("")}</div>`;
     this.q = (s) => this.el.querySelector(s);
-    this.key = null; this.timer = null;
+    this.key = null; this.timer = null; this.place = null;
   }
+
+  // size of the card as fractions of the host, in its current or compact form
+  size(compact) {
+    const had = this.el.classList.contains("compact");
+    this.el.classList.add("instant"); this.el.classList.toggle("compact", !!compact);
+    const r = this.el.getBoundingClientRect(), H = this.host.getBoundingClientRect();
+    this.el.classList.toggle("compact", had); this.el.classList.remove("instant");
+    return { w: r.width / H.width, h: r.height / H.height };
+  }
+
+  moveTo(spot) { if (!spot) return; this.el.style.left = (spot.x * 100).toFixed(2) + "%"; this.el.style.top = (spot.y * 100).toFixed(2) + "%"; }
 
   reset() { this.key = null; clearTimeout(this.timer); this.el.className = "story-card"; }
 
@@ -43,10 +70,13 @@ export class StoryCard {
       const n = +b.dataset.n; b.className = n < card.n || card.final ? "done" : n === card.n ? "now" : "";
     });
     this.el.classList.remove("in", "compact", "instant");
-    if (!animate) { this.el.classList.add("instant", "in", "compact"); return; }
+    // place: { full, strip } spots chosen by the page (the emptiest part of this station's framing)
+    const place = this.placer ? this.placer(card) : null;
+    if (!animate) { this.el.classList.add("instant", "in", "compact"); if (place) this.moveTo(place.strip); return; }
+    if (place) { this.el.classList.add("instant"); this.moveTo(place.full); void this.el.offsetWidth; this.el.classList.remove("instant"); }
     void this.el.offsetWidth;                                // restart the entrance
     this.el.classList.add("in");
-    if (!card.final) this.timer = setTimeout(() => this.el.classList.add("compact"), HOLD_MS);
+    if (!card.final) this.timer = setTimeout(() => { this.el.classList.add("compact"); if (place) this.moveTo(place.strip); }, HOLD_MS);
   }
 
   status(text) {
@@ -59,10 +89,10 @@ export class StoryCard {
 }
 
 export const STORY_CARD_CSS = `
-.story-card { position: absolute; left: 2.2%; top: 6%; width: min(36%, 460px); pointer-events: none; z-index: 3;
+.story-card { position: absolute; left: 2%; top: 4%; width: min(29%, 390px); pointer-events: none; z-index: 3;
   font-family: "Nunito", "Noto Sans Devanagari", system-ui, sans-serif; color: #26214a; opacity: 0;
-  transform: translateX(-30px) scale(.96); transform-origin: top left;
-  transition: transform .55s cubic-bezier(.2,1.4,.4,1), opacity .35s ease, width .45s ease; }
+  transform: translateY(-14px) scale(.96); transform-origin: top left;
+  transition: transform .55s cubic-bezier(.2,1.4,.4,1), opacity .35s ease, width .45s ease, left .6s cubic-bezier(.3,1.2,.4,1), top .6s cubic-bezier(.3,1.2,.4,1); }
 .story-card.in { opacity: 1; transform: none; }
 .story-card.instant, .story-card.instant * { transition: none !important; animation: none !important; }
 .story-card.instant .sc-title span { opacity: 1; transform: none; }
@@ -70,7 +100,7 @@ export const STORY_CARD_CSS = `
 .story-card .sc-inner { display: flex; gap: 14px; align-items: flex-start; background: rgba(255,255,255,.94);
   border-radius: 18px; padding: 16px 18px 14px; box-shadow: 0 14px 40px rgba(38,33,74,.22), 0 2px 0 rgba(91,63,209,.15) inset;
   border: 1px solid rgba(91,63,209,.14); backdrop-filter: blur(6px); transition: padding .45s ease, border-radius .45s ease; }
-.story-card .sc-num { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(140deg,#7b5cd6,#5b3fd1);
+.story-card .sc-num { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(140deg,#7b5cd6,#5b3fd1);
   color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 26px; box-shadow: 0 6px 16px rgba(91,63,209,.4);
   transition: width .45s ease, height .45s ease, font-size .45s ease; }
 .story-card.honest .sc-num { background: linear-gradient(140deg,#3ccf8e,#2bb673); box-shadow: 0 6px 16px rgba(43,182,115,.4); }
@@ -78,11 +108,11 @@ export const STORY_CARD_CSS = `
 .story-card .sc-text { min-width: 0; flex: 1; }
 .story-card .sc-kicker { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #7d77a3; margin-bottom: 2px;
   transition: opacity .3s ease, max-height .45s ease; max-height: 20px; overflow: hidden; }
-.story-card .sc-title { font-size: clamp(18px, 2.1vw, 28px); font-weight: 900; line-height: 1.12; letter-spacing: -.01em; transition: font-size .45s ease; }
+.story-card .sc-title { font-size: clamp(17px, 1.8vw, 24px); font-weight: 900; line-height: 1.12; letter-spacing: -.01em; transition: font-size .45s ease; }
 .story-card .sc-title span { display: inline-block; opacity: 0; transform: translateY(12px); }
 .story-card.in .sc-title span { animation: sc-word .5s cubic-bezier(.2,1.3,.4,1) forwards; animation-delay: calc(.12s + var(--i) * .07s); }
 @keyframes sc-word { to { opacity: 1; transform: none; } }
-.story-card .sc-body { font-size: clamp(13px, 1.2vw, 16px); font-weight: 600; line-height: 1.4; color: #4a4470; margin-top: 6px;
+.story-card .sc-body { font-size: clamp(12px, 1.05vw, 15px); font-weight: 600; line-height: 1.4; color: #4a4470; margin-top: 6px;
   max-height: 80px; overflow: hidden; transition: max-height .45s ease, opacity .3s ease, margin .45s ease; opacity: 0; }
 .story-card.in .sc-body { opacity: 1; transition-delay: .35s; }
 .story-card.honest .sc-body { color: #1b7a50; font-weight: 800; }
@@ -98,7 +128,7 @@ export const STORY_CARD_CSS = `
 .story-card .sc-rail b.done { background: #7b5cd6; }
 .story-card .sc-rail b.now { background: linear-gradient(90deg,#7b5cd6,#ffc857); }
 /* compact: the corner pill */
-.story-card.compact { width: auto; max-width: 48%; }
+.story-card.compact { width: max-content; max-width: 46%; }
 .story-card.compact .sc-inner { padding: 8px 14px 8px 8px; border-radius: 999px; align-items: center; gap: 10px; }
 .story-card.compact .sc-num { width: 34px; height: 34px; font-size: 16px; }
 .story-card.compact .sc-kicker, .story-card.compact .sc-body { max-height: 0; opacity: 0; margin: 0; }
@@ -106,6 +136,4 @@ export const STORY_CARD_CSS = `
 .story-card.compact .sc-text { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
 .story-card.compact .sc-status { margin-top: 0; white-space: nowrap; }
 .story-card.compact .sc-rail { opacity: 0; height: 0; margin: 0; }
-.story-card.final { left: 50%; top: 8%; transform: translateX(-50%); }
-.story-card.final.in { transform: translateX(-50%); }
 `;

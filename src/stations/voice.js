@@ -37,7 +37,7 @@ export function build(world, X) {
   function* sing(ctx, who, dur = 1.6) { yield* who.pose("sing", 0.35); yield* who.wiggle("headNod", 0.12, 2, dur); yield* who.pose("stand", 0.35); }
 
   const station = {
-    name: "voice", x: X, framing: { x: X, y: 2.0, z: -0.5, w: 10.2, h: 5.0 },
+    name: "voice", x: X, cards: { full: "tl", strip: { x: 0.02, y: 0.515 } }, framing: { x: X, y: 2.0, z: -0.5, w: 10.2, h: 5.0 },
     stages: {
       audio: {
         *enter(ctx) {

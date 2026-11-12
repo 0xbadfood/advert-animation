@@ -48,7 +48,7 @@ export function build(world, X) {
   }
 
   const station = {
-    name: "research", x: X, framing: { x: X, y: 2.0, z: -0.6, w: 9.6, h: 4.9 },
+    name: "research", x: X, cards: { full: "br", strip: "br" }, framing: { x: X, y: 2.0, z: -0.6, w: 9.6, h: 4.9 },
     stages: {
       arrive: {
         *enter(ctx) { if (R.root.position.x < X - 4) yield* R.hopTo(MARK[0], MARK[1]); yield* R.pose("wave", 0.35); yield* R.wiggle("rR", 0.25, 2, 0.9); yield* R.pose("stand", 0.3); },

@@ -52,7 +52,7 @@ export function build(world, X) {
   };
 
   const station = {
-    name: "hooks", x: X, framing: { x: X + 0.3, y: 2.0, z: -0.5, w: 9.8, h: 5.0 },
+    name: "hooks", x: X, cards: { full: "tc", strip: "tc" }, framing: { x: X + 0.3, y: 2.0, z: -0.5, w: 9.8, h: 5.0 },
     stages: {
       truths: {
         *enter(ctx) { if (W.root.position.x < X - 4) yield* W.hopTo(MARK[0], MARK[1]); nextFact(ctx); yield* W.pose("think", 0.4); yield 0.4; yield* W.pose("stand", 0.3); },

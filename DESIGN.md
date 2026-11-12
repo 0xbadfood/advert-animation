@@ -160,6 +160,13 @@ The small caption on top is replaced by an explainer card, HTML over the canvas 
 - **The honest lines live in the card:** the pick card carries "one of the top ideas…", and the weighing card's
   wording carries the fairness.
 - **Seeking** and catch-up show the current card settled, without the entrance.
+- **Placement, revised 2026-11-13** (the big card hid parts of the set): the layout is fixed per station, so each
+  station names its card spots, chosen by eye from its framing (`cards: { full, strip }` in the station; a spot name
+  `tl tc tr ml mr bl bc br` or an explicit `{x, y}`). The big card is narrower and holds about 4 s, then collapses into
+  the strip, which slides to its own spot. `world.freeSpot()` (projected panels and figures, scored per candidate)
+  is the fallback for a station without chosen spots.
+- **English only.** Cards and status lines stay in English on every run, Hinglish included (the user, 2026-11-13).
+  Only the artifacts themselves (hook lines, names) carry the run's language.
 
 ## 7. The emulator (the deliverable's shape)
 

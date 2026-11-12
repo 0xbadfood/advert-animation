@@ -67,7 +67,7 @@ export function build(world, X) {
   }
 
   const station = {
-    name: "assembly", x: X, framing: { x: X - 0.1, y: 2.05, z: -0.6, w: 10.2, h: 5.0 },
+    name: "assembly", x: X, cards: { full: "tc", strip: "tc" }, framing: { x: X - 0.1, y: 2.05, z: -0.6, w: 10.2, h: 5.0 },
     stages: {
       render: {
         *enter(ctx) {

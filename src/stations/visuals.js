@@ -32,7 +32,7 @@ export function build(world, X) {
   function* paintStroke(p, dur = 1.6) { yield* p.pose("paint", 0.35); yield* p.wiggle("sR", 0.22, 3, dur); yield* p.pose("stand", 0.3); }
 
   const station = {
-    name: "visuals", x: X, framing: { x: X, y: 2.1, z: -0.6, w: 10.6, h: 5.1 },
+    name: "visuals", x: X, cards: { full: "tl", strip: { x: 0.02, y: 0.37 } }, framing: { x: X, y: 2.1, z: -0.6, w: 10.6, h: 5.1 },
     stages: {
       visuals: {
         *enter(ctx) {
