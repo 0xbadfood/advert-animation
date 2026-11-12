@@ -36,7 +36,8 @@ and 4 s after "Your film is ready" the finished ad opens in a modal (play, downl
 
 User service `advert-animation` (`deploy/advert-animation.service`, the Vite dev server on :5190, so edits go live
 without a deploy), reached as https://adanime.photovault.live through Caddy on the VPN master (10.8.0.1 →
-10.8.0.4:5190; the site block is at the end of /etc/caddy/Caddyfile there, with a backup taken before the change).
+10.8.0.4:5190; the site block is at the end of /etc/caddy/Caddyfile there, with a backup taken before each change).
+Caddy compresses pages, scripts and the GLB models (zstd, gzip fallback): the models go over the wire at about 1.9 MB.
 
 ```bash
 systemctl --user status advert-animation        # restart after changing vite.config.js or package.json

@@ -247,6 +247,10 @@ Findings so far (greybox, 2026-11-12):
      storyboard legs, the director's chair, mic stands, the reel drum and its plinth, the phone. Each station keeps
      its primitive as the fallback (`world.prop()` returns null when props are not loaded).
    - A soft studio reflection map (RoomEnvironment, intensity 0.14) so metal and lacquer read.
-   - Open: compress the models (about 7 MB with props); this is the last pass, by the user's choice.
+   - Model size, settled 2026-11-13: lossless only. Caddy compresses `model/gltf-binary` (zstd, gzip fallback): the
+     cast, set and props go from 6.16 MB to 1.85 MB with zstd and 2.43 MB with gzip. Measured and not adopted (the
+     user: "2 MB without loss is not a lot"): meshopt (0.53 MB over the wire, lossy quantisation, 20 KB decoder) and
+     Draco (0.88 MB, 300 KB decoder). Still to do on the production page: hashed filenames with long cache headers,
+     and preloading during the intake form.
 5. **The new pipeline events in `~/advert`**, where the emulator shows the blind waits hurt.
 6. **Wire into the story page** as the default renderer behind the existing `LiveSource`.
