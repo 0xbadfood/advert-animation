@@ -5,6 +5,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { THEMES, STATION_ORDER, themeAt, blendAt } from "./themes.js";
 
 // The studio: one scene, stations laid out left to right along x, a camera "focus" that trucks between station
@@ -15,8 +16,8 @@ export const PALETTE = { floor: 0xe2d8fb, wall: 0xf1eaff, rug: 0xcfc0f7, violet:
 
 export class World {
   // cast: the Blender figurine templates by role (world/models.js), or null for the greybox figures
-  constructor(runner, views = [], cast = null, set = null) {
-    this.cast = cast; this.setTemplate = set;
+  constructor(runner, views = [], cast = null, set = null, props = null) {
+    this.cast = cast; this.setTemplate = set; this.props = props;
     this.runner = runner; this.V = makeVerbs(runner);
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xeee6ff);
@@ -24,12 +25,19 @@ export class World {
     this.slots = {}; this.figures = []; this.stations = {}; this.updaters = []; this.views = views;
     this.silent = false; this.overflows = []; this.onOverflow = null;
     this.focus = { x: 0, y: 1.4, z: 0, w: 9, h: 5 };
+    // a soft studio to reflect: metal (gold rims, chrome posts) and the lacquer's clear coat need something to mirror.
+    // Made once per renderer (views outlive worlds).
+    const v0 = views[0];
+    if (v0) {
+      if (!v0.envMap) { const pm = new THREE.PMREMGenerator(v0.renderer); v0.envMap = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); }
+      this.scene.environment = v0.envMap; this.scene.environmentIntensity = 0.14;
+    }
     this.buildStudio();
   }
 
   buildStudio() {
     const s = this.scene;
-    this.hemi = new THREE.HemisphereLight(0xf5efff, 0xb9a6f2, 1.25); s.add(this.hemi);
+    this.hemi = new THREE.HemisphereLight(0xf5efff, 0xb9a6f2, 1.0); s.add(this.hemi);
     const key = (this.key = new THREE.DirectionalLight(0xfff4e6, 2.1));
     key.position.set(-6, 12, 9); key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
     const sc = key.shadow.camera; sc.left = -9; sc.right = 9; sc.top = 9; sc.bottom = -9; sc.near = 1; sc.far = 40; key.shadow.bias = -0.0004; key.shadow.radius = 4;
@@ -56,6 +64,16 @@ export class World {
   }
 
   themeAt(x) { return themeAt(x, STATION_GAP); }
+
+  // a clone of a Blender station prop (blender/props.py), placed and added; null when the props are not loaded, so the
+  // station builds its primitive instead
+  prop(name, x = 0, y = 0, z = 0, rotY = 0, parent = null) {
+    const t = this.props && this.props[name];
+    if (!t) return null;
+    const o = t.clone(true); o.position.set(x, y, z); o.rotation.set(0, rotY, 0);
+    (parent || this.scene).add(o);
+    return o;
+  }
 
   // a round rug that marks a station
   rug(x, r = 4.2) {

@@ -8,10 +8,12 @@ export function build(world, X) {
   world.rug(X, 4.6);
   // the collector: stacked glowing rings on a pedestal
   const col = new THREE.Group(); col.position.set(X + 0.4, 0, -0.9); world.scene.add(col);
+  if (!world.prop("collector", 0, 0, 0, 0, col)) {
   world.box(1.3, 0.35, 1.3, 0xf6f2ff, 0, 0.175, 0, col, 0.3);
   const glowM = new THREE.MeshStandardMaterial({ color: 0x8f7bff, roughness: 0.2, emissive: 0x6d4cff, emissiveIntensity: 0.4, transparent: true, opacity: 0.85 });
   const rings = [0, 1, 2].map((i) => { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.22, 36), glowM); r.position.y = 0.55 + i * 0.3; r.castShadow = true; col.add(r); return r; });
   void rings;
+  }
 
   const s = {
     desktop: panel(world, "site_desktop", { x: X - 2.6, y: 2.75, z: -1.7, w: 2.3, h: 1.45, rotY: 0.28, kind: "image", placeholder: "website" }),

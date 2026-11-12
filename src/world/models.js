@@ -46,6 +46,26 @@ export function loadSet(url = "/models/set.glb") {
   });
   return setCache;
 }
+// the station props (blender/props.py -> public/models/props.glb): templates named prop_<name>
+let propsCache = null;
+export function loadProps(url = "/models/props.glb") {
+  if (propsCache) return propsCache;
+  propsCache = new GLTFLoader().loadAsync(url).then((g) => {
+    const out = {};
+    for (const node of [...g.scene.children]) {
+      if (!node.name.startsWith("prop_")) continue;
+      node.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData.shared = true; if (o.material) o.material.userData.shared = true; } });
+      node.removeFromParent();
+      out[node.name.slice(5)] = node;
+    }
+    return out;
+  });
+  return propsCache;
+}
+export async function tryLoadProps() {
+  try { return await loadProps(); } catch (e) { console.warn("station props not loaded, using primitives", e); return null; }
+}
+
 export async function tryLoadSet() {
   try { return await loadSet(); } catch (e) { console.warn("set dressing not loaded", e); return null; }
 }

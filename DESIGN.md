@@ -235,6 +235,11 @@ Findings so far (greybox, 2026-11-12):
      bulbs, plants).
    - Bloom touches only pixels brighter than white, with neutral tone mapping, so cards keep their colours.
    - Framing is tightened (`ZOOM` 0.85).
-   - Open: compress the models (cast + set about 5.3 MB).
+   - Station props (`blender/props.py` -> `public/models/props.glb`, 12 templates) replace the runtime primitives:
+     panel stands, easels, the collector, the side table, the judges' board and round table, the idea vault, the
+     storyboard legs, the director's chair, mic stands, the reel drum and its plinth, the phone. Each station keeps
+     its primitive as the fallback (`world.prop()` returns null when props are not loaded).
+   - A soft studio reflection map (RoomEnvironment, intensity 0.14) so metal and lacquer read.
+   - Open: compress the models (about 7 MB with props); this is the last pass, by the user's choice.
 5. **The new pipeline events in `~/advert`**, where the emulator shows the blind waits hurt.
 6. **Wire into the story page** as the default renderer behind the existing `LiveSource`.

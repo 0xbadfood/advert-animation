@@ -10,7 +10,7 @@ export const MAX_HOOKS = 8;
 export function build(world, X) {
   world.rug(X, 4.6);
   const tbl = new THREE.Group(); tbl.position.set(X - 2.3, 0, 0.9); world.scene.add(tbl);
-  world.box(0.9, 0.06, 0.6, 0xf6f2ff, 0, 0.62, 0, tbl, 0.3); world.box(0.08, 0.6, 0.08, 0xc79a6b, 0, 0.3, 0, tbl);
+  if (!world.prop("side_table", 0, 0, 0, 0, tbl)) { world.box(0.9, 0.06, 0.6, 0xf6f2ff, 0, 0.62, 0, tbl, 0.3); world.box(0.08, 0.6, 0.08, 0xc79a6b, 0, 0.3, 0, tbl); }
   const mug = props.mug(); mug.position.set(0.2, 0.65, 0); tbl.add(mug);
 
   const notes = panel(world, "notes", { x: X - 2.9, y: 2.15, z: -0.9, w: 2.0, h: 1.15, rotY: 0.35, kind: "card", placeholder: "notes" });

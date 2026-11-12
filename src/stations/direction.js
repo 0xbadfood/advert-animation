@@ -7,14 +7,16 @@ import { panel, easel, flash, v3, visit } from "./common.js";
 export function build(world, X) {
   world.rug(X, 4.8);
   // the storyboard on a wide easel
-  for (const dx of [-2.4, 2.4]) world.box(0.08, 2.6, 0.08, 0xc79a6b, X + 0.7 + dx, 1.3, -1.75);
+  if (!world.prop("storyboard_legs", X + 0.7, 0, -1.75)) for (const dx of [-2.4, 2.4]) world.box(0.08, 2.6, 0.08, 0xc79a6b, X + 0.7 + dx, 1.3, -1.75);
   const board = panel(world, "storyboard", { x: X + 0.7, y: 2.5, z: -1.65, w: 5.4, h: 1.95, kind: "storyboard", placeholder: "storyboard", px: 900 });
   const selected = panel(world, "selected", { x: X - 3.1, y: 2.2, z: -0.7, w: 1.6, h: 0.9, rotY: 0.35, kind: "card", placeholder: "selected idea" });
   easel(world, X - 3.1, -0.85, 0.35, 1.9);
   // the director's chair
   const ch = new THREE.Group(); ch.position.set(X - 4.0, 0, 1.0); ch.rotation.y = 0.6; world.scene.add(ch);
-  world.box(0.6, 0.05, 0.5, 0x26214a, 0, 0.55, 0, ch); world.box(0.6, 0.35, 0.04, 0x26214a, 0, 0.85, -0.24, ch);
-  for (const sx of [-0.27, 0.27]) for (const sz of [-0.2, 0.2]) world.box(0.04, 0.55, 0.04, 0xc79a6b, sx, 0.275, sz, ch);
+  if (!world.prop("director_chair", 0, 0, 0, 0, ch)) {
+    world.box(0.6, 0.05, 0.5, 0x26214a, 0, 0.55, 0, ch); world.box(0.6, 0.35, 0.04, 0x26214a, 0, 0.85, -0.24, ch);
+    for (const sx of [-0.27, 0.27]) for (const sz of [-0.2, 0.2]) world.box(0.04, 0.55, 0.04, 0xc79a6b, sx, 0.275, sz, ch);
+  }
 
   // generic doodles for lit frames (not derived from any scene: honest before the stills exist)
   const doodles = [];

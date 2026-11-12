@@ -31,7 +31,7 @@ export class Emulator {
     if (this.player) this.player.dispose();
     this.player = new StoryPlayer(this.views, {
       adapter: this.adapter, policy: this.scenario.policy, seed: JSON.stringify(this.scenario.stages) + (this.scenario.seed || 1),
-      say: this.onSay, note: this.onNote, cast: this.cast || null, set: this.set || null,
+      say: this.onSay, note: this.onNote, cast: this.cast || null, set: this.set || null, props: this.props || null,
       onStage: (stage, fast) => this.onStage(stage, fast || this.seeking), onSignal: (stage, e) => this.onSignal(stage, e),
     });
     this.onReset();

@@ -13,11 +13,11 @@ import { Metrics } from "../emulator/metrics.js";
 export const DT = 1 / 30;
 
 export class StoryPlayer {
-  constructor(views, { adapter, policy, seed = 1, say, note, cast = null, set = null, onStage, onSignal }) {
+  constructor(views, { adapter, policy, seed = 1, say, note, cast = null, set = null, props = null, onStage, onSignal }) {
     this.views = views;
     this.runner = new Runner();
     this.metrics = new Metrics();
-    this.world = new World(this.runner, views, cast, set);
+    this.world = new World(this.runner, views, cast, set, props);
     this.world.onOverflow = (slot, text) => this.metrics.overflow(slot, text, this.runner.t);
     this.stations = buildStations(this.world);
     this.world.jumpTo("research");

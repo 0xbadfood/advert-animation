@@ -17,6 +17,8 @@ export function panel(world, name, { x, y, z, w, h, rotY = 0, kind = "card", pla
 
 // a holo stand under a floating panel: a thin glowing post and a disc, so panels read as objects in the room
 export function stand(world, x, z, height, color = 0xb9a6f2) {
+  const p = world.prop("stand", x, 0, z);
+  if (p) { p.getObjectByName("stand_post").scale.y = height; return p; }
   const g = new THREE.Group();
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, height, 8), new THREE.MeshStandardMaterial({ color, roughness: 0.3, emissive: color, emissiveIntensity: 0.25 }));
   post.position.y = height / 2; g.add(post);
@@ -26,6 +28,8 @@ export function stand(world, x, z, height, color = 0xb9a6f2) {
 }
 
 export function easel(world, x, z, rotY = 0, h = 2.1) {
+  const p = world.prop("easel", x, 0, z, rotY);
+  if (p) { p.scale.setScalar(h / 2.0); return p; }
   const g = new THREE.Group(); const wood = 0xc79a6b;
   for (const sx of [-0.35, 0.35]) { const leg = world.box(0.06, h, 0.06, wood, sx, h / 2, 0, g); leg.rotation.z = -sx * 0.12; }
   const back = world.box(0.06, h * 0.95, 0.06, wood, 0, h * 0.47, -0.35, g); back.rotation.x = 0.2;

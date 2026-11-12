@@ -9,13 +9,15 @@ export function build(world, X) {
   world.rug(X, 5.0);
   // the reel drum
   const drum = new THREE.Group(); drum.position.set(X - 0.5, 1.35, -0.9); world.scene.add(drum);
+  if (!world.prop("drum", 0, 0, 0, 0, drum)) {
   const gold = new THREE.MeshStandardMaterial({ color: 0xffc857, roughness: 0.25, metalness: 0.5 });
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 1.5, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0x5b3fd1, roughness: 0.3, side: THREE.DoubleSide })); body.rotation.z = Math.PI / 2; drum.add(body);
   for (const sx of [-0.78, 0.78]) {
     const reel = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.08, 12, 40), gold); reel.rotation.y = Math.PI / 2; reel.position.x = sx; drum.add(reel);
     for (let k = 0; k < 4; k++) { const sp = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.5, 0.06), gold); sp.position.x = sx; sp.rotation.x = (k * Math.PI) / 4; drum.add(sp); }
   }
-  world.box(2.2, 0.5, 1.2, 0xf6f2ff, X - 0.5, 0.25, -0.9, undefined, 0.3);
+  }
+  if (!world.prop("drum_base", X - 0.5, 0, -0.9)) world.box(2.2, 0.5, 1.2, 0xf6f2ff, X - 0.5, 0.25, -0.9, undefined, 0.3);
   const ring = panel(world, "ring", { x: X - 0.5, y: 1.35, z: 0.0, w: 0.75, h: 0.75, kind: "ring", frame: false, transparent: true, px: 240 });
   let spin = 0.3, angle = 0, lastT = null;
 
@@ -31,7 +33,7 @@ export function build(world, X) {
   let stripOn = false;
 
   // the phone (9:16): the ad plays here
-  const phoneBody = world.box(1.12, 1.95, 0.08, 0x1d1838, X + 3.3, 2.05, -0.75, undefined, 0.2); phoneBody.rotation.y = -0.3;
+  if (!world.prop("phone", X + 3.3, 2.05, -0.76, -0.3)) { const phoneBody = world.box(1.12, 1.95, 0.08, 0x1d1838, X + 3.3, 2.05, -0.75, undefined, 0.2); phoneBody.rotation.y = -0.3; }
   const phone = panel(world, "phone", { x: X + 3.3, y: 2.05, z: -0.7, w: 0.98, h: 1.74, rotY: -0.3, kind: "image", placeholder: "your film", frame: false, px: 540 });
   let ad = null, adPainted = null;
 

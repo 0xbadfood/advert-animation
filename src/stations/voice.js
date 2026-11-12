@@ -13,6 +13,7 @@ export function build(world, X) {
 
   const MICS = [-2.3, -0.77, 0.77, 2.3].map((d) => X + d);
   for (const mx of MICS) {
+    if (world.prop("mic", mx, 0, 0.95)) continue;
     world.box(0.03, 1.15, 0.03, 0x3d3360, mx, 0.58, 0.95);
     const head = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.1, 6, 12), new THREE.MeshStandardMaterial({ color: 0x9a96b8, roughness: 0.3, metalness: 0.4 }));
     head.position.set(mx, 1.22, 0.92); head.rotation.x = 0.5; world.scene.add(head);

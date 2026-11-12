@@ -9,7 +9,7 @@ export const MAX_IDEAS = 8;
 export function build(world, X) {
   world.rug(X, 4.8);
   // the board
-  world.box(6.0, 2.2, 0.1, 0xf6f2ff, X, 2.75, -2.0, undefined, 0.4);
+  if (!world.prop("board", X, 2.75, -2.06)) world.box(6.0, 2.2, 0.1, 0xf6f2ff, X, 2.75, -2.0, undefined, 0.4);
   const cards = [];
   for (let i = 0; i < MAX_IDEAS; i++) {
     const c = i % 4, r = Math.floor(i / 4);
@@ -20,12 +20,14 @@ export function build(world, X) {
 
   // the bin (idea bank): a squat lilac vault with a slot of its own for the count
   const binG = new THREE.Group(); binG.position.set(X + 3.6, 0, -0.5); world.scene.add(binG);
-  const vault = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.8, 1.3, 32), new THREE.MeshStandardMaterial({ color: 0xb9a6f2, roughness: 0.35 })); vault.position.y = 0.65; vault.castShadow = true; binG.add(vault);
+  if (!world.prop("vault", 0, 0, 0, 0, binG)) { const vault = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.8, 1.3, 32), new THREE.MeshStandardMaterial({ color: 0xb9a6f2, roughness: 0.35 })); vault.position.y = 0.65; vault.castShadow = true; binG.add(vault); }
   const binCount = panel(world, "bin", { x: X + 3.6, y: 0.75, z: 0.32, w: 0.9, h: 0.55, kind: "counter", placeholder: "bin" });
 
   // table and judges
-  const table = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.08, 40), new THREE.MeshStandardMaterial({ color: 0xf6f2ff, roughness: 0.3 })); table.position.set(X, 0.48, 0.9); table.castShadow = table.receiveShadow = true; world.scene.add(table);
-  world.box(0.15, 0.45, 0.15, 0xc79a6b, X, 0.225, 0.9);
+  if (!world.prop("round_table", X, 0, 0.9)) {
+    const table = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, 0.08, 40), new THREE.MeshStandardMaterial({ color: 0xf6f2ff, roughness: 0.3 })); table.position.set(X, 0.48, 0.9); table.castShadow = table.receiveShadow = true; world.scene.add(table);
+    world.box(0.15, 0.45, 0.15, 0xc79a6b, X, 0.225, 0.9);
+  }
   const J = [makeFigure(world, "crew1", X - 7, 0.2, Math.PI / 2), makeFigure(world, "crew2", X - 7.5, -0.2, Math.PI / 2), makeFigure(world, "crew3", X + 7, 0.2, -Math.PI / 2)];
   J[1].hold(props.stamp(), "R");
   const SEATS = [[X - 1.6, -0.1, 0.35], [X, -0.5, 0], [X + 1.6, -0.1, -0.35]];
