@@ -201,7 +201,9 @@ Findings so far (greybox, 2026-11-12):
 1. **Emulator plus greybox.** *(Built 2026-11-12.)* All seven stations, the beats, reactions, group reactions and
    camera moves, primitive figurines, and the page above. Next comes pacing: more late-phase variants for the long
    local stages.
-2. **Blender spike on the GB10:** headless runs, a lightmap bake, glTF export into this runtime.
+2. **Blender spike on the GB10:** headless runs, a lightmap bake, glTF export into this runtime. *(Done 2026-11-13:
+   Ubuntu Blender 4.0.2, CPU bakes, GLB with skeleton, clips and baked AO plays in Three.js. Findings and gotchas
+   in `blender/NOTES.md`.)*
 3. **Figurine kit in bpy:** the shared rig, the pose library, then the three leads, then four crew members built
    from their parts.
 4. **The final set and look**, station by station, each checked against every scenario.
