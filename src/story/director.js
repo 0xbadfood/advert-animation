@@ -14,8 +14,9 @@ export const PHASE_AT = { mid: 20, late: 60 };
 export const HURRY_K = 0.35;                 // a beat still playing when the next stage is due finishes at about 3x speed
 
 export class Director {
-  constructor({ runner, world, stations, adapter, policy, rng, metrics, say, note }) {
+  constructor({ runner, world, stations, adapter, policy, rng, metrics, say, note, onStage, onSignal }) {
     Object.assign(this, { runner, world, stations, adapter, policy, rng, metrics });
+    this.onStage = onStage || (() => {}); this.onSignal = onSignal || (() => {});   // the story card listens here
     this.say = say || (() => {}); this.note = note || (() => {});
     this.cur = -1; this.want = -1; this.retryTo = null; this.failed = false; this.halted = false;
     this.entered = {}; this.enterEventT = {}; this.enteredAt = 0; this.lastBeat = null; this.bags = {};
@@ -50,6 +51,7 @@ export class Director {
     }
     if (stage !== undefined) {
       this.applyData(stage, job, e);
+      this.onSignal(stage, e);
       if (c.tick !== undefined && ORDER[c.tick] >= this.cur) this.reactions[c.tick].push({ job, ...e, at: t });
       this.metrics.event(stage, e.kind, t);
     }
@@ -140,6 +142,7 @@ export class Director {
     const now = this.runner.now();
     this.metrics.enter(name, now, fast);
     this.enteredAt = now;                                   // dwell and loop phases count from the start of the entrance
+    this.onStage(name, fast);                               // the story card
     this.say(CAPTION[name]);
     if (name === "judge") this.note(HONEST.more);
     else if (name === "pick") this.note(HONEST.pick);

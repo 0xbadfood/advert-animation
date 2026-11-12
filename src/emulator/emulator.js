@@ -9,8 +9,10 @@ import { realSource, realAdapter } from "./real.js";
 // adapter. The player (the canvas) is the same one the live page will drive from the real event stream.
 // Seeking is a convenience for tuning: a fresh player fast-forwarded to the time.
 export class Emulator {
-  constructor(views, { onSay, onNote } = {}) {
+  constructor(views, { onSay, onNote, onStage, onSignal, onReset } = {}) {
     this.views = views; this.onSay = onSay || (() => {}); this.onNote = onNote || (() => {});
+    this.onStage = onStage || (() => {}); this.onSignal = onSignal || (() => {}); this.onReset = onReset || (() => {});
+    this.seeking = false;
     this.speed = 1; this.playing = false; this.uploads = {};
   }
 
@@ -30,7 +32,9 @@ export class Emulator {
     this.player = new StoryPlayer(this.views, {
       adapter: this.adapter, policy: this.scenario.policy, seed: JSON.stringify(this.scenario.stages) + (this.scenario.seed || 1),
       say: this.onSay, note: this.onNote, cast: this.cast || null, set: this.set || null,
+      onStage: (stage, fast) => this.onStage(stage, fast || this.seeking), onSignal: (stage, e) => this.onSignal(stage, e),
     });
+    this.onReset();
     this.next = 0;
   }
 
@@ -51,7 +55,9 @@ export class Emulator {
   seek(t) {
     t = Math.max(0, Math.min(this.end, t));
     if (t < this.player.t) this.reset();
+    this.seeking = true;
     this.advance(t);
+    this.seeking = false;
     this.onSay(this.player.caption); this.onNote(this.player.noteText);
     this.player.draw();
   }

@@ -145,6 +145,22 @@ cycles.
   peeking at the phone). Beats are 3-7 s in the long stages, so a 3-minute wait plays about 35 beats over 12-16
   variants.
 
+### Story cards (2026-11-13)
+
+The small caption on top is replaced by an explainer card, HTML over the canvas (`src/ui/storycard.js`, copy in
+`src/story/narration.js`):
+
+- **Steps:** 8 (research, angles, opening lines, weighing, direction, voice, pictures, final cut). The pick and the
+  end have cards of their own.
+- **On entry**, a card slides in on the left with the step number, the title revealed word by word, a plain
+  explanation and a live status from the signals (`StatusTracker`: "24 of 56 comparisons", "5 opening lines
+  written", "cutting · 40%"). An 8-segment rail shows progress.
+- **After about 5 s** the card settles into a compact pill in the corner, and the status keeps updating, so a long
+  wait is never covered.
+- **The honest lines live in the card:** the pick card carries "one of the top ideas…", and the weighing card's
+  wording carries the fairness.
+- **Seeking** and catch-up show the current card settled, without the entrance.
+
 ## 7. The emulator (the deliverable's shape)
 
 The page (settled with the user, 2026-11-12):

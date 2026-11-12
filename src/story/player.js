@@ -13,7 +13,7 @@ import { Metrics } from "../emulator/metrics.js";
 export const DT = 1 / 30;
 
 export class StoryPlayer {
-  constructor(views, { adapter, policy, seed = 1, say, note, cast = null, set = null }) {
+  constructor(views, { adapter, policy, seed = 1, say, note, cast = null, set = null, onStage, onSignal }) {
     this.views = views;
     this.runner = new Runner();
     this.metrics = new Metrics();
@@ -25,7 +25,7 @@ export class StoryPlayer {
     this.director = new Director({
       runner: this.runner, world: this.world, stations: this.stations, adapter,
       policy: policy || { hooks: "line", pick: "name" }, rng: rng(hash(String(seed)) || 1), metrics: this.metrics,
-      say: (s) => { this.caption = s; say && say(s); }, note: (s) => { this.noteText = s; note && note(s); },
+      say: (s) => { this.caption = s; say && say(s); }, note: (s) => { this.noteText = s; note && note(s); }, onStage, onSignal,
     });
     this.director.start();
     this.runner.step(0);

@@ -2,6 +2,8 @@ import { World } from "./world/world.js";
 import { Emulator } from "./emulator/emulator.js";
 import { loadFilm } from "./emulator/real.js";
 import { tryLoadCast, tryLoadSet } from "./world/models.js";
+import { StoryCard, STORY_CARD_CSS } from "./ui/storycard.js";
+import { cardFor, StatusTracker } from "./story/narration.js";
 import { STAGES } from "./story/stages.js";
 import { LIMITS } from "./emulator/metrics.js";
 
@@ -17,9 +19,13 @@ const $ = (s) => document.querySelector(s);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
 const views = ["#wide"].map((id) => ({ ...World.makeView($(id + " canvas")), root: $(id) }));
+// the story card explains each step over the canvas, with a live status from the signals (story/narration.js)
+document.head.appendChild(Object.assign(document.createElement("style"), { textContent: STORY_CARD_CSS }));
+const card = new StoryCard($("#wide")), tracker = new StatusTracker();
 const emu = new Emulator(views, {
-  onSay: (s) => views.forEach((v) => (v.root.querySelector(".cap").textContent = s || "")),
-  onNote: (s) => views.forEach((v) => (v.root.querySelector(".honest").textContent = s || "")),
+  onStage: (stage, fast) => { const c = cardFor(stage); if (!c) return; card.show(c, { animate: !fast }); card.status(tracker.for(c.key)); },
+  onSignal: (stage, e) => { const r = tracker.feed(e); if (r && r.card === card.key) card.status(r.text); },
+  onReset: () => { card.reset(); tracker.reset(); },
 });
 window.__emu = emu;
 
