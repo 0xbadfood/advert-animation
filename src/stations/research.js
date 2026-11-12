@@ -61,8 +61,10 @@ export function build(world, X) {
           if (R.root.position.x < X - 4) yield* R.hopTo(MARK[0], MARK[1]);
           yield* R.pose("point", 0.35); yield* orb(world, v3(X - 0.6, 1.5, 0.7), colTop, { dur: 0.8 }); yield* R.pose("stand", 0.3);
         },
-        phases: { early: ["scanSite", "scanPhone", "pull", "fact"], mid: ["scanSite", "pull", "fact", "think", "typing"], late: ["fact", "think", "stretch", "pull", "typing"] },
+        phases: { early: ["scanSite", "scanPhone", "pull", "fact", "compare"], mid: ["scanSite", "pull", "fact", "think", "typing", "compare", "checkList"], late: ["fact", "think", "stretch", "pull", "typing", "compare", "checkList", "scanPhone"] },
         beats: {
+          *compare(ctx) { yield* R.turnTo(0.55, 0.3); yield* R.pose("think", 0.35); yield* ctx.V.tween(2.2, (t) => { R.j.headTurn = 0.35 * Math.sin(t * Math.PI * 2); }, (t) => t); yield* R.pose("stand", 0.3); yield* R.turnTo(0, 0.3); },
+          *checkList(ctx) { yield* R.turnTo(0.9, 0.3); yield* ctx.V.all(R.pose("point", 0.3), flash(world, s.check, 0x2bb673, 0.6)); yield* R.pose("nod", 0.3); yield* R.pose("stand", 0.3); yield* R.turnTo(0, 0.3); },
           *scanSite(ctx) { yield* scan(ctx, 0.6); },
           *scanPhone(ctx) { yield* scan(ctx, 0.2); },
           *pull(ctx) { yield* R.pose("point", 0.3); yield* ctx.V.all(orb(world, v3(X - 2.6, 2.7, -1.6), colTop), flash(world, s.desktop)); yield* R.pose("stand", 0.3); yield 0.4; },

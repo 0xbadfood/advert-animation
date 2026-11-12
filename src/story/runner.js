@@ -20,13 +20,18 @@ export class Runner {
     const parent = this.cur;
     const task = {
       gen, done: false, wake: this.cur ? this.cur.logical : this.t, logical: this.cur ? this.cur.logical : this.t,
-      wait: null, k: opts.k ?? (parent ? parent.k : 1), name: opts.name || "", cancelled: false, end: null,
+      wait: null, k: opts.k ?? (parent ? parent.k : 1), name: opts.name || "", cancelled: false, end: null, parent,
     };
     this.tasks.push(task);
     return task;
   }
 
   cancel(task) { if (task && !task.done) { task.cancelled = true; task.done = true; task.end = this.t; try { task.gen.return(); } catch (e) { /* ignore */ } } }
+
+  // speed up a task and everything it spawned (the director hurries a beat when the next stage is due)
+  rescale(root, k) {
+    for (const t of this.tasks) { let p = t; while (p && p !== root) p = p.parent; if (p === root) t.k = Math.min(t.k, k); }
+  }
 
   now() { return this.cur ? this.cur.logical : this.t; }
   k() { return this.cur ? this.cur.k : 1; }

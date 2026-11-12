@@ -146,7 +146,7 @@ function writeChecks() {
   for (const r of rows) {
     h += `<tr><td class="l">${r.stage}${r.fast ? " (compressed)" : ""}</td><td>${f(r.enterEvent)}</td><td>${f(r.enter)}</td>`
       + `<td class="${r.lag > LIMITS.lag ? "bad" : ""}">${f(r.lag)}</td><td class="${r.exit !== null && !r.fast && r.dwell < LIMITS.shortStage && r.stage !== "done" ? "bad" : ""}">${f(r.dwell)}</td>`
-      + `<td>${r.beats}</td><td class="l ${r.maxRep > LIMITS.repeats ? "bad" : ""}">${r.worst ? `${r.worst} ×${r.maxRep}` : "–"}</td><td>${r.reacts}</td><td>${r.folded}</td></tr>`;
+      + `<td>${r.beats}</td><td class="l ${r.maxRep > Math.max(LIMITS.repeats, Math.ceil((r.dwell || 0) / LIMITS.repeatEvery)) ? "bad" : ""}">${r.worst ? `${r.worst} ×${r.maxRep}` : "–"}</td><td>${r.reacts}</td><td>${r.folded}</td></tr>`;
   }
   $("#table").innerHTML = h;
   $("#warnings").innerHTML = warnings.map((w) => `<li class="${w.level}">${w.text}</li>`).join("") || "<li class='info'>no warnings so far</li>";

@@ -11,13 +11,14 @@ export const FAST_K = 0.12;
 export const MIN_DWELL = { pick: 4.5 };
 export const MUST_SHOW_WITHIN = 8;          // seconds: an older must-see stage (a late page load) is compressed like any other
 export const PHASE_AT = { mid: 20, late: 60 };
+export const HURRY_K = 0.35;                 // a beat still playing when the next stage is due finishes at about 3x speed
 
 export class Director {
   constructor({ runner, world, stations, adapter, policy, rng, metrics, say, note }) {
     Object.assign(this, { runner, world, stations, adapter, policy, rng, metrics });
     this.say = say || (() => {}); this.note = note || (() => {});
     this.cur = -1; this.want = -1; this.retryTo = null; this.failed = false; this.halted = false;
-    this.entered = {}; this.enterEventT = {}; this.enteredAt = 0; this.lastBeat = null;
+    this.entered = {}; this.enterEventT = {}; this.enteredAt = 0; this.lastBeat = null; this.bags = {};
     this.reactions = Object.fromEntries(STAGES.map((s) => [s, []]));
     this.seen = new Set();
     this.data = { facts: [], hooks: [], pick: null, scenes: [], stills: [], lines: [] };
@@ -42,7 +43,7 @@ export class Director {
     const t = this.runner.t;
     const stage = c.enter ?? c.tick;
     if (c.enter !== undefined) {
-      if (ORDER[c.enter] > this.want) { this.want = ORDER[c.enter]; }
+      if (ORDER[c.enter] > this.want) { this.want = ORDER[c.enter]; if (this.want > this.cur) this.hurry(); }
       this.entered[c.enter] = { job, ...e };
       if (this.enterEventT[c.enter] === undefined) this.enterEventT[c.enter] = t;
       this.metrics.enterEvent(c.enter, t);
@@ -70,6 +71,14 @@ export class Director {
   }
 
   start() { this.task = this.runner.spawn(this.main(), { name: "director" }); }
+
+  // the next stage is due: the running beat wraps up quickly rather than playing out (a held stage keeps its pace)
+  hurry() {
+    if (!this.beatTask || this.beatTask.done) return;
+    const name = STAGES[this.cur];
+    if (this.runner.t - this.enteredAt < (MIN_DWELL[name] || 0)) return;
+    this.runner.rescale(this.beatTask, HURRY_K);
+  }
 
   // ------------------------------------------------------------ the loop (a coroutine on the story clock)
   *sub(gen, k = 1) { if (!gen) return; const t = this.runner.spawn(gen, { k }); yield t; }
@@ -160,12 +169,24 @@ export class Director {
     let pool = phases[phase] || phases.mid || phases.early || Object.keys(beats);
     pool = pool.filter((b) => beats[b]);
     if (!pool.length) { yield 0.5; return; }
-    let pick = this.rng.pick(pool);
-    if (pool.length > 1 && pick === this.lastBeat) pick = pool[(pool.indexOf(pick) + 1) % pool.length];
+    // a shuffle bag per stage and phase: every beat in the pool plays once before any plays again, never twice running
+    const key = name + ":" + phase;
+    let bag = this.bags[key];
+    if (!bag || !bag.length) {
+      bag = pool.slice();
+      for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+      if (bag.length > 1 && bag[bag.length - 1] === this.lastBeat) [bag[0], bag[bag.length - 1]] = [bag[bag.length - 1], bag[0]];
+      this.bags[key] = bag;
+    }
+    const pick = bag.pop();
     this.lastBeat = pick;
     this.metrics.beat(name, pick, phase, this.runner.now());
     const t0 = this.runner.now();
-    yield* this.sub(beats[pick](this.ctx));
+    const task = this.runner.spawn(beats[pick](this.ctx));
+    this.beatTask = task;
+    if (this.want > this.cur) this.hurry();
+    yield task;
+    this.beatTask = null;
     if (this.runner.now() - t0 < 0.05) yield 0.5;          // a beat must take time, or the loop would spin
   }
 }

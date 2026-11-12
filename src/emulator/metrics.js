@@ -1,7 +1,7 @@
 import { STAGES } from "../story/stages.js";
 
 // What the emulator measures while a scenario plays (DESIGN.md section 7). Every number is in story seconds.
-export const LIMITS = { lag: 8, shortStage: 3, repeats: 6 };
+export const LIMITS = { lag: 8, shortStage: 3, repeats: 6, repeatEvery: 40 };   // repeats: at most 6, or one per 40 s on screen
 
 export class Metrics {
   constructor() { this.reset(); }
@@ -33,7 +33,8 @@ export class Metrics {
       rows.push({ stage: name, enterEvent: s.enterEvent, enter: s.enter, exit: s.exit, fast: s.fast, lag, dwell, beats: beatCounts.reduce((a, b) => a + b, 0), maxRep, worst: worst ? worst[0] : "", reacts: s.reacts, folded: s.folded, events: s.events, phases: s.phases });
       if (lag !== null && lag > LIMITS.lag) warnings.push({ level: "lag", stage: name, text: `${name}: entered ${lag.toFixed(1)} s after its event (budget ${LIMITS.lag} s)` });
       if (dwell !== null && s.exit !== null && !s.fast && dwell < LIMITS.shortStage && name !== "done") warnings.push({ level: "short", stage: name, text: `${name}: on screen ${dwell.toFixed(1)} s, too short to read` });
-      if (maxRep > LIMITS.repeats) warnings.push({ level: "repeat", stage: name, text: `${name}: beat "${worst[0]}" played ${maxRep} times; the loop pool is thin for this length` });
+      const allowed = Math.max(LIMITS.repeats, Math.ceil((dwell || 0) / LIMITS.repeatEvery));   // a 6-minute wait may repeat more
+      if (maxRep > allowed) warnings.push({ level: "repeat", stage: name, text: `${name}: beat "${worst[0]}" played ${maxRep} times in ${Math.round(dwell)} s (allowed ${allowed}); the loop pool is thin for this length` });
       if (s.folded > 0) warnings.push({ level: "info", stage: name, text: `${name}: ${s.folded} reactions folded into group reactions` });
     }
     for (const o of this.overflows) warnings.push({ level: "overflow", stage: "", text: `slot ${o.slot}: text cut ("${String(o.text).slice(0, 40)}…")` });

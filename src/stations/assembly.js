@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { makeFigure, props } from "../world/cast.js";
-import { panel, flash, orb, v3 } from "./common.js";
+import { panel, flash, orb, v3, visit } from "./common.js";
 
 // Station 7, assembly (engine stages render, done). Locally 140-200 s, in the cloud 30-60 s. The director's wand sends
 // the run's own inputs (the pick, the voice, the pictures) into the reel drum; a strip of the real stills runs to the
@@ -51,6 +51,11 @@ export function build(world, X) {
   const crowd = ["researcher", "writer", "crew1", "crew2", "crew3", "crew4"].map((r, i) => makeFigure(world, r, X + 8 + i * 0.6, 1.2, -Math.PI / 2));
   const CROWD_AT = [[X - 1.7, 0.75], [X - 0.6, 1.0], [X + 0.6, 1.0], [X + 1.7, 0.8], [X - 2.8, 0.5], [X + 2.6, 0.4]];
 
+  // cameos for the long wait
+  const WHOME = [X - 7.5, 1.4], CHOME = [X + 7.5, 1.6], DM = [X - 2.3, 0.8];
+  const Wc = makeFigure(world, "writer", WHOME[0], WHOME[1], Math.PI / 2); const mug = Wc.hold(props.mug(), "R"); mug.position.set(0, -0.06, 0.06);
+  const Cc = makeFigure(world, "crew2", CHOME[0], CHOME[1], -Math.PI / 2);
+
   function fillInputs(ctx) {
     if (ctx.data.pick) inIdea.set(ctx.pickCard(ctx.data.pick), { kind: "card", reveal: "pop" });
     if (ctx.data.voiceSamples) inVoice.set({ samples: ctx.data.voiceSamples, progress: 1 }, { kind: "wave", reveal: "pop" });
@@ -72,8 +77,27 @@ export function build(world, X) {
           spin = 1.2; stripOn = ctx.data.stills.some(Boolean);
           yield* D.pose("stand", 0.3);
         },
-        phases: { early: ["wand", "watch"], mid: ["wand", "watch", "pace", "check"], late: ["pace", "check", "wand", "tap", "watch"] },
+        phases: {
+          early: ["wand", "watch", "sparkles", "followStrip", "inputs"],
+          mid: ["wand", "watch", "pace", "check", "polish", "followStrip", "countdown", "sparkles"],
+          late: ["pace", "check", "wand", "tap", "watch", "polish", "followStrip", "countdown", "sparkles", "quiet", "peek", "coffee", "inputs", "stretch"],
+        },
         beats: {
+          *inputs(ctx) { yield* D.turnTo(-0.9, 0.3); yield* D.pose("pointL", 0.3); for (const p of [inIdea, inVoice, inPics]) { yield* ctx.V.all(flash(world, p, 0xffc857, 0.5), D.bounce(0.04, 0.3)); } yield* D.pose("nod", 0.3); yield* D.pose("stand", 0.3); yield* D.turnTo(0.6, 0.3); },
+          *stretch(ctx) { yield* D.pose("cheer", 0.5); yield* D.wiggle("side", 0.12, 1, 1.2); yield* D.pose("stand", 0.5); yield 0.6; },
+          *polish(ctx) { yield* D.hopTo(X - 1.5, 0.5, { faceYaw: Math.PI * 0.8 }); yield* D.pose("point", 0.3); yield* D.wiggle("rR", 0.3, 5, 2.0); yield* D.pose("stand", 0.3); yield* D.hopTo(DM[0], DM[1], { faceYaw: 0.6 }); },
+          *followStrip(ctx) { yield* D.turnTo(-0.2, 0.3); D.j.headNod = -0.3; yield* ctx.V.tween(3.0, (t) => { D.j.headTurn = -0.6 + 1.2 * t; }, (t) => t); yield* D.pose("stand", 0.3); yield* D.turnTo(0.6, 0.3); },
+          *countdown(ctx) { yield* D.pose("point", 0.3); for (let i = 0; i < 3; i++) { yield* ctx.V.all(D.bounce(0.06, 0.35), flash(world, phone, 0xffc857, 0.35)); yield 0.25; } yield* D.pose("stand", 0.3); },
+          *sparkles(ctx) { yield* D.pose("point", 0.3); for (let i = 0; i < 3; i++) yield* orb(world, v3(X - 1.9, 1.5, 1.0), v3(X - 0.5, 1.4 + (i - 1) * 0.3, -0.9), { dur: 0.45, color: [0xffc857, 0x8be9ff, 0x7ee0a1][i] }); spin = Math.min(2.2, spin + 0.2); yield* D.pose("stand", 0.3); },
+          *quiet(ctx) { yield* D.pose("hold", 0.4); yield* D.wiggle("headTilt", 0.08, 1, 3.2); yield* D.pose("stand", 0.4); },
+          *peek(ctx) { yield* visit(Cc, CHOME, [X + 2.0, 0.9], function* () { yield* Cc.pose("lookUp", 0.35); yield* Cc.wiggle("headTurn", 0.3, 1, 1.4); yield* ctx.V.all(Cc.pose("thumbs", 0.3), D.turnTo(1.0, 0.3)); yield 0.5; yield* D.turnTo(0.6, 0.3); }, -0.6); },
+          *coffee(ctx) {
+            yield* visit(Wc, WHOME, [DM[0] - 0.75, DM[1] + 0.2], function* () {
+              yield* ctx.V.all(Wc.pose("offer", 0.35), D.turnTo(-1.0, 0.3));
+              yield 0.4; mug.visible = false; yield* D.pose("hold", 0.3); yield* D.bounce(0.06, 0.4); yield 0.5;
+              yield* ctx.V.all(D.pose("stand", 0.3), D.turnTo(0.6, 0.3), Wc.pose("wave", 0.3)); mug.visible = true;
+            }, 0.9);
+          },
           *wand(ctx) { yield* D.pose("point", 0.3); yield* ctx.V.all(D.wiggle("eR", 0.3, 2, 0.8), orb(world, v3(X - 1.9, 1.5, 1.0), v3(X - 0.5, 1.4, -0.9), { dur: 0.7 })); spin = Math.min(2.2, spin + 0.3); yield* D.pose("stand", 0.3); },
           *watch(ctx) { yield* D.turnTo(-0.4, 0.3); yield* D.pose("lookUp", 0.4); yield 1.2; yield* D.pose("stand", 0.3); yield* D.turnTo(0.6, 0.3); },
           *pace(ctx) { yield* D.hopTo(X - 3.2, 1.4, { faceYaw: 0.8 }); yield* D.pose("think", 0.4); yield 0.6; yield* D.hopTo(X - 2.3, 0.8, { faceYaw: 0.6 }); yield* D.pose("stand", 0.3); },

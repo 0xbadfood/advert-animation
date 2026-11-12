@@ -1,6 +1,8 @@
 # advert-animation: the pipeline as a live figurine film
 
-Design note, 2026-11-12. Settled with the user over the first session. This replaces the Linkwork SVG skins in
+Design note, 2026-11-12. Settled with the user over the first session. Who works on this: Claude (this repo) and
+Fable 5.1, the owner of the ~/advert pipeline. The notes are written for an agent picking the work up: contracts,
+commands and paths over prose. This replaces the Linkwork SVG skins in
 `~/advert/advert/web/static/story/` with a polished 3D story whose **motion is fixed and owned in code** and whose
 **artifact slots fill in with real pipeline output as it lands**. The ChatGPT images in this folder are mood only.
 The hard rules come from `~/advert/docs` (first-run-story.md, trial-film.md, production-architecture.md).
@@ -132,8 +134,16 @@ cycles.
 - **Scheduler**: generator coroutines on a virtual clock, so the story is a pure function of
   `(scenario, seed, time)`. Scrubbing is a reset plus fast simulation, and the headless runs are deterministic.
 - **Catch-up**: skipped stages play enter and exit at 0.12x duration with their data applied silently.
-- **Variant choice**: by elapsed time in the stage (early under 20 s, mid under 60 s, late after that), seeded, with
-  no immediate repeat.
+- **Variant choice**: by elapsed time in the stage (early under 20 s, mid under 60 s, late after that), from a
+  seeded shuffle bag per stage and phase. Every beat in the pool plays once before any repeats, and never twice
+  running.
+- **Hurry**: when the next stage's signal arrives mid-beat, the running beat and everything it spawned finish at
+  0.35x duration (`HURRY_K`), rather than being cut off or holding the stage's entrance past the lag budget. A stage
+  still inside its minimum dwell (the pick) keeps its pace.
+- **Long waits carry more, longer beats**, including cameos (`visit()` in `stations/common.js`): a figure from
+  another station drops by (the writer with coffee, the researcher with the magnifier at the gallery, a crew member
+  peeking at the phone). Beats are 3-7 s in the long stages, so a 3-minute wait plays about 35 beats over 12-16
+  variants.
 
 ## 7. The emulator (the deliverable's shape)
 
@@ -182,8 +192,9 @@ Findings so far (greybox, 2026-11-12):
   minimum dwell) now plays in full while its signal is under 8 s old.
 - **The dwell counts from the start of the entrance.** Direction now enters about 6.6 s after its signal, inside
   the budget.
-- **Long local stages** (visuals, render at 2-3 min) repeat their beats up to 20 times. That is the case for more
-  variants, and for the render sub-signals.
+- **Long local stages** (visuals, render at 2-3 min) repeated their beats up to 20 times. Fixed with the shuffle
+  bag, 8-10 more beats each (cameos included) and the hurry. Every preset and the six films tried (including
+  4fd59e8014, whose retried direction ran 6 minutes) pass with no warnings.
 
 ## 8. Build order
 

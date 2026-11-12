@@ -1,5 +1,5 @@
 import { makeFigure, props } from "../world/cast.js";
-import { panel, easel, flash } from "./common.js";
+import { panel, easel, flash, visit } from "./common.js";
 
 // Station 6, visuals. Locally 110-220 s with a picture every 3-35 s; in the cloud the stills land in a 10-20 s burst.
 // Each picture goes blank -> sketch -> painted on the next easel (its own little sequence the moment it lands), then
@@ -22,6 +22,11 @@ export function build(world, X) {
   const D = makeFigure(world, "director", X - 7.5, 1.3, Math.PI / 2);
   D.hold(props.megaphone(), "L");
   const SPOT = EX.map((dx) => [X + dx + 0.55, 0.35]);
+  // cameos for the long wait: the writer brings coffee, the researcher checks the gallery
+  const WHOME = [X - 7.5, 1.6], RHOME = [X + 7.5, 1.4];
+  const Wc = makeFigure(world, "writer", WHOME[0], WHOME[1], Math.PI / 2); const mug = Wc.hold(props.mug(), "R"); mug.position.set(0, -0.06, 0.06);
+  const Rc = makeFigure(world, "researcher", RHOME[0], RHOME[1], -Math.PI / 2); Rc.hold(props.magnifier(), "R");
+  const DMARK = [X - 4.4, 1.2];
   let landed = 0;
 
   function* paintStroke(p, dur = 1.6) { yield* p.pose("paint", 0.35); yield* p.wiggle("sR", 0.22, 3, dur); yield* p.pose("stand", 0.3); }
@@ -31,11 +36,46 @@ export function build(world, X) {
     stages: {
       visuals: {
         *enter(ctx) {
-          yield* ctx.V.all(...P.map((p, i) => (function* () { yield i * 0.12; yield* p.hopTo(SPOT[i][0], SPOT[i][1], { faceYaw: -0.75 }); })()), D.hopTo(X - 4.4, 1.2, { faceYaw: 0.5 }));
+          yield* ctx.V.all(...P.map((p, i) => (function* () { yield i * 0.12; yield* p.hopTo(SPOT[i][0], SPOT[i][1], { faceYaw: -0.75 }); })()), D.hopTo(DMARK[0], DMARK[1], { faceYaw: 0.5 }));
           yield* D.pose("pointL", 0.35); yield* D.bounce(0.1, 0.4); yield* D.pose("stand", 0.3);
         },
-        phases: { early: ["paintAll", "shout", "stepBack"], mid: ["paintAll", "stepBack", "shout", "admire"], late: ["admire", "paintAll", "stepBack", "shout", "stretch"] },
+        phases: {
+          early: ["paintAll", "shout", "stepBack", "focus"],
+          mid: ["paintAll", "stepBack", "shout", "admire", "inspect0", "inspect1", "focus", "brushes", "wave"],
+          late: ["admire", "paintAll", "stepBack", "shout", "stretch", "inspect0", "inspect1", "inspect2", "inspect3", "swap", "coffee", "magnify", "brushes", "focus", "wave"],
+        },
         beats: {
+          // the director walks the line, one easel at a time
+          ...Object.fromEntries([0, 1, 2, 3].map((i) => ["inspect" + i, function* (ctx) {
+            yield* D.hopTo(X + EX[i] - 0.15, 1.15, { faceYaw: Math.PI * 0.85 });
+            yield* D.pose("think", 0.4); yield* D.wiggle("headTilt", 0.14, 1, 1.4);
+            yield* ctx.V.all(D.pose("thumbs", 0.3), P[i].bounce(0.08, 0.4), flash(world, canvases[i], 0xffc857, 0.6));
+            yield 0.3; yield* D.pose("stand", 0.25);
+            yield* D.hopTo(DMARK[0], DMARK[1], { faceYaw: 0.5 });
+          }])),
+          *swap(ctx) {
+            const [a, b] = ctx.rng() < 0.5 ? [0, 1] : [2, 3];
+            yield* ctx.V.all(P[a].hopTo(SPOT[b][0], 0.9, { faceYaw: 0 }), P[b].hopTo(SPOT[a][0], 0.9, { faceYaw: 0 }));
+            yield* ctx.V.all(P[a].pose("shrug", 0.3), P[b].pose("shrug", 0.3)); yield 0.4;
+            yield* ctx.V.all(P[a].hopTo(SPOT[a][0], SPOT[a][1], { faceYaw: -0.75 }), P[b].hopTo(SPOT[b][0], SPOT[b][1], { faceYaw: -0.75 }));
+            yield* ctx.V.all(P[a].pose("stand", 0.25), P[b].pose("stand", 0.25));
+          },
+          *coffee(ctx) {
+            yield* visit(Wc, WHOME, [DMARK[0] - 0.75, DMARK[1] + 0.2], function* () {
+              yield* ctx.V.all(Wc.pose("offer", 0.35), D.turnTo(-1.0, 0.3));
+              yield 0.4; mug.visible = false; yield* D.pose("hold", 0.3); yield* D.bounce(0.06, 0.4); yield 0.5;
+              yield* ctx.V.all(D.pose("stand", 0.3), D.turnTo(0.5, 0.3), Wc.pose("wave", 0.3)); mug.visible = true;
+            }, 0.9);
+          },
+          *magnify(ctx) {
+            yield* visit(Rc, RHOME, [X + 1.6, 1.3], function* () {
+              yield* Rc.pose("point", 0.35); Rc.j.headNod = -0.4;
+              yield* Rc.wiggle("headTurn", 0.5, 1, 2.2); yield* Rc.pose("thumbs", 0.3); yield 0.4;
+            }, 0);
+          },
+          *brushes(ctx) { yield* ctx.V.all(...P.map((p) => p.turnTo(0, 0.3))); yield* ctx.V.all(...P.map((p, i) => (function* () { yield i * 0.1; yield* p.pose("hold", 0.3); yield* p.wiggle("eR", 0.4, 4, 1.4); })())); yield* ctx.V.all(...P.map((p) => p.pose("stand", 0.3)), ...P.map((p) => p.turnTo(-0.75, 0.3))); },
+          *focus(ctx) { yield* ctx.V.all(...P.map((p, i) => (function* () { yield i * 0.3; yield* p.pose("paint", 0.4); yield* p.wiggle("sR", 0.12, 4, 3.6); yield* p.pose("stand", 0.4); })())); },
+          *wave(ctx) { const p = ctx.rng.pick(P); yield* p.turnTo(0, 0.3); yield* p.pose("wave", 0.35); yield* p.wiggle("rR", 0.25, 2, 1.0); yield* p.pose("stand", 0.3); yield* p.turnTo(-0.75, 0.3); },
           *paintAll(ctx) { yield* ctx.V.all(...P.map((p, i) => (function* () { yield i * 0.15; yield* paintStroke(p, 1.4 + (i % 2) * 0.4); })())); },
           *shout(ctx) { yield* D.pose("conduct", 0.3); yield* ctx.V.all(D.bounce(0.1, 0.4), D.wiggle("headNod", 0.1, 2, 0.8)); yield* D.pose("stand", 0.3); },
           *stepBack(ctx) { const i = Math.floor(ctx.rng() * P.length), p = P[i]; yield* p.hopTo(SPOT[i][0] + 0.2, 1.1, { faceYaw: Math.PI * 0.9 }); yield* p.pose("think", 0.35); yield 0.7; yield* p.hopTo(SPOT[i][0], SPOT[i][1], { faceYaw: -0.75 }); yield* p.pose("stand", 0.25); },

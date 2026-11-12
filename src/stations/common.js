@@ -49,3 +49,13 @@ export function* orb(world, from, to, { dur = 0.9, color = 0xffc857, arc = 0.6 }
 export function* together(V, ...gens) { yield* V.all(...gens); }
 
 export const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+// A cameo: a figure from another station drops by during a long wait (offstage, hidden until it enters).
+// visit(fig, to, act) hops it in, runs act(), hops it back out and hides it again.
+export function* visit(fig, home, to, act, faceYaw = 0) {
+  yield* fig.hopTo(to[0], to[1], { faceYaw });
+  if (act) yield* act();
+  yield* fig.pose("stand", 0.25);
+  yield* fig.hopTo(home[0], home[1]);
+  fig.root.visible = false;
+}

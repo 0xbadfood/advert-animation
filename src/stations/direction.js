@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { makeFigure, props } from "../world/cast.js";
-import { panel, easel, flash, v3 } from "./common.js";
+import { panel, easel, flash, v3, visit } from "./common.js";
 
 // Station 4, direction. A blind LLM wait of 25-70 s. The writer hands the chosen card to the director, who paces the
 // storyboard. Frames light only with counts and durations (direction.scene / plan view): never scene text.
@@ -33,6 +33,10 @@ export function build(world, X) {
   const card = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.22), new THREE.MeshStandardMaterial({ color: 0x2bb673, emissive: 0x2bb673, emissiveIntensity: 0.4 }));
   card.position.set(0, -0.05, 0.12); card.rotation.x = -Math.PI / 2.4; Wr.hold(card, "R"); card.visible = false;
   const MARK = [X - 0.6, 0.6];
+  const WSPOT = [X - 2.7, 0.2];                     // where the writer stands once the card is handed over
+  const book = Wr.hold(props.notebook(), "L"); book.visible = false;
+  const CHOME = [X + 7.5, 1.4];
+  const Cc = makeFigure(world, "crew3", CHOME[0], CHOME[1], -Math.PI / 2); const mug = Cc.hold(props.mug(), "R"); mug.position.set(0, -0.06, 0.06);
 
   function paintBoard(ctx, reveal = "none") {
     const sc = ctx.data.scenes.filter(Boolean);
@@ -54,11 +58,31 @@ export function build(world, X) {
           yield* world.fly(fly, v3(X - 3.1, 2.2, -0.6), { dur: 0.7, arc: 0.7 });
           selected.set(ctx.pickCard(ctx.data.pick), { kind: "card", reveal: "pop" });
           yield* V.all(Wr.pose("stand", 0.3), D.pose("point", 0.35), D.turnTo(0.3, 0.3));
-          yield* Wr.hopTo(X - 2.7, 0.2, { faceYaw: 0.5 });
+          yield* Wr.hopTo(WSPOT[0], WSPOT[1], { faceYaw: 0.5 });
           yield* D.pose("stand", 0.3);
         },
-        phases: { early: ["pointAlong", "think", "confer"], mid: ["pace", "pointAlong", "confer", "think", "clap"], late: ["pace", "clap", "stretch", "confer", "pointAlong"] },
+        phases: {
+          early: ["pointAlong", "think", "confer", "frame", "writerNotes"],
+          mid: ["pace", "pointAlong", "confer", "think", "clap", "walk0", "walk1", "walk2", "frame", "writerNotes"],
+          late: ["pace", "clap", "stretch", "confer", "pointAlong", "walk0", "walk1", "walk2", "frame", "writerNotes", "coffee", "think"],
+        },
         beats: {
+          // the director walks the board, one third at a time, and studies it
+          ...Object.fromEntries([0, 1, 2].map((i) => ["walk" + i, function* (ctx) {
+            yield* D.hopTo(X - 1.0 + i * 1.8, 0.2, { faceYaw: Math.PI * 0.9 });
+            yield* D.pose("think", 0.35); yield* D.wiggle("headTurn", 0.25, 1, 1.6);
+            yield* ctx.V.all(D.pose("point", 0.3), flash(world, board, 0xffc857, 0.5)); yield 0.2;
+            yield* D.pose("stand", 0.25); yield* D.hopTo(MARK[0] + 0.9, MARK[1], { faceYaw: 0 });
+          }])),
+          *frame(ctx) { yield* D.pose("offer", 0.35); D.j.eL = D.j.eR = 1.4; D.j.headTilt = 0.2; yield 0.3; yield* D.wiggle("headTurn", 0.3, 1, 1.4); yield* D.pose("stand", 0.35); },
+          *writerNotes(ctx) { book.visible = true; yield* Wr.pose("read", 0.4); yield* Wr.wiggle("headNod", 0.1, 2, 2.0); yield* ctx.V.all(Wr.pose("stand", 0.3), D.turnTo(-0.8, 0.3)); book.visible = false; yield* D.turnTo(0, 0.3); },
+          *coffee(ctx) {
+            yield* visit(Cc, CHOME, [MARK[0] + 1.7, MARK[1] + 0.3], function* () {
+              yield* ctx.V.all(Cc.pose("offer", 0.35), D.turnTo(1.0, 0.3));
+              yield 0.4; mug.visible = false; yield* D.pose("hold", 0.3); yield* D.bounce(0.06, 0.4); yield 0.4;
+              yield* ctx.V.all(D.pose("stand", 0.3), D.turnTo(0, 0.3), Cc.pose("wave", 0.3)); mug.visible = true;
+            }, -0.9);
+          },
           *pointAlong(ctx) {
             yield* ctx.V.all(D.turnTo(Math.PI * 0.85, 0.35), D.pose("point", 0.35));
             yield* ctx.V.tween(2.2, (t) => { D.j.headTurn = -0.4 + 0.8 * t; D.j.rR = 0.2 + 0.4 * t; }, (t) => t);
