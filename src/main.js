@@ -15,7 +15,7 @@ const qs = new URLSearchParams(location.search);
 const $ = (s) => document.querySelector(s);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
-const views = ["#wide", "#tall"].map((id) => ({ ...World.makeView($(id + " canvas")), root: $(id) }));
+const views = ["#wide"].map((id) => ({ ...World.makeView($(id + " canvas")), root: $(id) }));
 const emu = new Emulator(views, {
   onSay: (s) => views.forEach((v) => (v.root.querySelector(".cap").textContent = s || "")),
   onNote: (s) => views.forEach((v) => (v.root.querySelector(".honest").textContent = s || "")),
@@ -111,7 +111,6 @@ async function pick(id) {
 $("#play").onclick = () => { if (emu.t >= emu.end) emu.seek(0); emu.playing = !emu.playing; };
 $("#restart").onclick = () => emu.seek(0);
 $("#speed").onchange = () => (emu.speed = +$("#speed").value);
-$("#phone").onchange = () => document.body.classList.toggle("nophone", !$("#phone").checked);
 
 // ---------------------------------------------------------------- timeline: pipeline above, story below, signals at the bottom
 const tl = $("#timeline");

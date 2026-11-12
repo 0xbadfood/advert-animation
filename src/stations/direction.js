@@ -41,7 +41,7 @@ export function build(world, X) {
   }
 
   const station = {
-    name: "direction", x: X, framing: { x: X + 0.2, y: 2.0, z: -0.6, w: 10.2, h: 5.0, tw: 4.6, th: 7.4 },
+    name: "direction", x: X, framing: { x: X + 0.2, y: 2.0, z: -0.6, w: 10.2, h: 5.0 },
     stages: {
       direction: {
         *enter(ctx) {

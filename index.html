@@ -14,17 +14,13 @@
   h1 { font-size: 18px; margin: 0; font-weight: 900; }
   .sub { color: var(--muted); margin: 0; }
 
-  /* the stage: the canvas, with the phone preview beside it */
-  #views { display: flex; gap: 12px; align-items: flex-start; }
+  /* the stage: the canvas */
+  #views { display: block; }
   .view { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
   .view canvas { display: block; width: 100%; height: 100%; }
-  #wide { flex: 1 1 auto; aspect-ratio: 16 / 9; min-width: 0; }
-  #tall { flex: 0 0 auto; aspect-ratio: 9 / 16; width: 21%; min-width: 150px; }
-  body.nophone #tall { display: none; }
+  #wide { aspect-ratio: 16 / 9; width: 100%; }
   .cap { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(38,33,74,.85); color: #fff; padding: 6px 16px; border-radius: 999px; font-weight: 800; white-space: nowrap; }
-  #tall .cap { font-size: 11px; white-space: normal; text-align: center; width: 88%; padding: 4px 8px; }
   .honest { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); background: rgba(255,255,255,.93); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; width: max-content; max-width: 92%; text-align: center; }
-  #tall .honest { font-size: 10px; }
   .honest:empty, .cap:empty { display: none; }
 
   /* transport */
@@ -87,7 +83,6 @@
   #warnings li.lag, #warnings li.short, #warnings li.repeat, #warnings li.overflow { color: var(--warn); font-weight: 700; }
   #warnings li.info { color: var(--muted); }
   #log { font: 12px/1.5 ui-monospace, monospace; max-height: 240px; overflow: auto; white-space: pre; }
-  @media (max-width: 900px) { #views { flex-direction: column; } #tall { width: 55%; } }
 </style>
 </head>
 <body>
@@ -95,14 +90,12 @@
   <div><h1>Story emulator</h1><p class="sub">Pick a finished film and set each stage's length, then Play: the emulator sends that run's signals and its real artifacts to the story at the set times.</p></div>
   <div id="views">
     <div class="view" id="wide"><canvas></canvas><div class="cap"></div><div class="honest"></div><div id="loading">loading the film…</div></div>
-    <div class="view" id="tall"><canvas></canvas><div class="cap"></div><div class="honest"></div></div>
   </div>
   <div class="bar">
     <button id="play" class="primary">Play</button>
     <button id="restart">Restart</button>
     <label>speed <select id="speed"><option>1</option><option>2</option><option>5</option><option selected>10</option><option>20</option><option>50</option></select></label>
     <span id="clock">0.0 s</span>
-    <label><input type="checkbox" id="phone" checked> phone preview</label>
     <span id="note"></span>
   </div>
   <canvas id="timeline" title="pipeline stages (top), story stages (middle), signals (bottom); click to seek"></canvas>

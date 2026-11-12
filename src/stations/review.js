@@ -43,7 +43,7 @@ export function build(world, X) {
   }
 
   const station = {
-    name: "review", x: X, framing: { x: X + 0.4, y: 2.1, z: -0.6, w: 10.4, h: 5.0, tw: 4.6, th: 7.4 },
+    name: "review", x: X, framing: { x: X + 0.4, y: 2.1, z: -0.6, w: 10.4, h: 5.0 },
     stages: {
       judge: {
         *enter(ctx) {

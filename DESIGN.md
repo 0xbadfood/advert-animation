@@ -70,7 +70,7 @@ The emulator already plays all of these, so their value can be judged before any
   baked lightmaps and AO, a skeleton, named actions, and empties that mark the slots and cameras.
 - **Three.js in the page** loads the glTF and plays it. A station's beat is a named action, and actions crossfade at
   beat boundaries. **Slots are live textures**: canvas-drawn cards, images and video, updated the moment their data
-  lands. Bloom is a post-processing pass. The camera is framed per viewport (16:9 desktop and 9:16 phone) from
+  lands. Bloom is a post-processing pass. The camera is framed for the page's 16:9 canvas from
   framing boxes, not fixed shots.
 - **Why not pre-rendered video plates.** Live, interruptible, variable-count, instant slot updates are what a
   real-time scene does well, and video clips do badly. Gapless clip switching on mobile Safari, tens of MB of video,
@@ -139,7 +139,8 @@ cycles.
 
 The page (settled with the user, 2026-11-12):
 
-- **The canvas on top**, with a 9:16 phone preview beside it.
+- **The canvas on top**, 16:9. It is a desktop tool: phones are out of scope (settled 2026-11-12); if a phone
+  experience is ever wanted, it would be an app, not this page.
 - **Controls below it.** One card per stage, each with its **length** and its **artifacts**:
   - research: site and phone screenshots, logo, brand colours, facts, market;
   - angles: the count;
@@ -188,7 +189,7 @@ Findings so far (greybox, 2026-11-12):
 
 1. **Emulator plus greybox.** *(Built 2026-11-12.)* All seven stations, the beats, reactions, group reactions and
    camera moves, primitive figurines, and the page above. Next comes pacing: more late-phase variants for the long
-   local stages, and per-station framing for 9:16.
+   local stages.
 2. **Blender spike on the GB10:** headless runs, a lightmap bake, glTF export into this runtime.
 3. **Figurine kit in bpy:** the shared rig, the pose library, then the three leads, then four crew members built
    from their parts.

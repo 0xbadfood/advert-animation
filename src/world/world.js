@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { makeVerbs } from "../story/runner.js";
 
 // The studio: one scene, stations laid out left to right along x, a camera "focus" that trucks between station
-// framings, and any number of views (desktop 16:9, phone 9:16) that each frame the focus for their own aspect.
+// framings, and the views that render it (a desktop page: 16:9; phones are out of scope, DESIGN.md section 5).
 export const STATION_GAP = 13;
 export const PALETTE = { floor: 0xe2d8fb, wall: 0xf1eaff, rug: 0xcfc0f7, violet: 0x5b3fd1, gold: 0xffc857, lilac: 0xb9a6f2, wood: 0xc79a6b, desk: 0xf6f2ff };
 
@@ -14,7 +14,7 @@ export class World {
     this.scene.fog = new THREE.Fog(0xeee6ff, 34, 70);
     this.slots = {}; this.figures = []; this.stations = {}; this.updaters = []; this.views = views;
     this.silent = false; this.overflows = []; this.onOverflow = null;
-    this.focus = { x: 0, y: 1.4, z: 0, w: 9, h: 5, tw: 5, th: 8 };
+    this.focus = { x: 0, y: 1.4, z: 0, w: 9, h: 5 };
     this.buildStudio();
   }
 
@@ -67,16 +67,15 @@ export class World {
     for (const v of this.views) v.renderer.renderLists.dispose();
   }
 
-  // frame the focus for this view's aspect: wide views fit (w, h), tall views fit (tw, th)
+  // frame the focus box (w, h) for this view's aspect
   frame(v) {
     const W = v.canvas.clientWidth || 16, H = v.canvas.clientHeight || 9, aspect = W / H;
     v.renderer.setSize(W, H, false); v.camera.aspect = aspect;
-    const f = this.focus, tall = aspect < 1;
-    const bw = tall ? f.tw : f.w, bh = tall ? f.th : f.h;
+    const f = this.focus, bw = f.w, bh = f.h;
     const vfov = THREE.MathUtils.degToRad(v.camera.fov);
     const distH = bh / 2 / Math.tan(vfov / 2), distW = bw / 2 / (Math.tan(vfov / 2) * aspect);
     const dist = Math.max(distH, distW) + 0.5;
-    const dir = new THREE.Vector3(0, tall ? 0.26 : 0.3, 1).normalize();
+    const dir = new THREE.Vector3(0, 0.3, 1).normalize();
     v.camera.position.set(f.x + dir.x * dist, f.y + dir.y * dist, f.z + dir.z * dist);
     v.camera.lookAt(f.x, f.y, f.z);
     v.camera.updateProjectionMatrix();

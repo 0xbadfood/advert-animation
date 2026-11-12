@@ -27,7 +27,7 @@ export function build(world, X) {
   function* paintStroke(p, dur = 1.6) { yield* p.pose("paint", 0.35); yield* p.wiggle("sR", 0.22, 3, dur); yield* p.pose("stand", 0.3); }
 
   const station = {
-    name: "visuals", x: X, framing: { x: X, y: 2.1, z: -0.6, w: 10.6, h: 5.1, tw: 4.6, th: 7.4 },
+    name: "visuals", x: X, framing: { x: X, y: 2.1, z: -0.6, w: 10.6, h: 5.1 },
     stages: {
       visuals: {
         *enter(ctx) {
