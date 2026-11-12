@@ -4,8 +4,8 @@
 
 What it proves on this box (aarch64 GB10, Ubuntu Blender 4.0.2):
   1. a figurine built entirely from code (lathe body, sphere head, base with a rim, arms with mittens);
-  2. an armature (skeleton) with the runtime's joint layout; the figurine's parts are rigid, each parented to a bone
-     (a figurine has no skin to bend, so no weight painting is needed);
+  2. joints as axis-free pivots (empties) in the runtime's layout and names; the rigid parts hang from them (a
+     figurine has no skin to bend, so no skeleton or weight painting is needed);
   3. actions (animation clips) keyed from code: "idle" and "wave";
   4. ambient occlusion baked into the parts' colour attributes (soft contact shading that moves with the figure);
   5. full lighting (soft shadow included) baked into a texture on a static floor patch;
@@ -132,65 +132,68 @@ for side, sx in (("L", 1), ("R", -1)):
 parts.update(arm)
 step("model")
 
-# ---------------------------------------------------------------- the skeleton: the runtime's joint layout
-arm_data = bpy.data.armatures.new("rig")
-rig = link(bpy.data.objects.new("researcher", arm_data))
-bpy.context.view_layer.objects.active = rig
-bpy.ops.object.mode_set(mode="EDIT")
-eb = arm_data.edit_bones
-def bone(name, head, tail, parent=None):
-    b = eb.new(name); b.head = head; b.tail = tail
-    if parent: b.parent = eb[parent]
-    return b
-bone("root", (0, 0, 0), (0, 0, 0.08))
-bone("hop", (0, 0, 0.08), (0, 0, 0.16), "root")
-bone("body", (0, 0, 0.08), (0, 0, 0.68), "hop")
-bone("head", (0, 0, 0.7), (0, 0, 1.18), "body")
-for side, sx in (("L", 1), ("R", -1)):
-    bone(f"shoulder.{side}", (sx * 0.2, 0, 0.6), (sx * 0.2, 0, 0.4), "body")
-    bone(f"elbow.{side}", (sx * 0.2, 0, 0.4), (sx * 0.2, 0, 0.21), f"shoulder.{side}")
-bpy.ops.object.mode_set(mode="OBJECT")
+# ---------------------------------------------------------------- joints: the runtime's layout, as plain pivots
+# A figurine is a rigid toy, so its joints are empties (invisible pivot points) with NO rest rotation, placed where the
+# runtime's joints are and named like them (src/world/figure.js: root > hop > body > head; body > shoulder_X > elbow_X >
+# hand_X). Bones were tried first: a bone's axes follow the bone, so "raise the arm" turned the wrong way. With
+# axis-free pivots the runtime sets rotations exactly as it does on the greybox, no conversion.
+# Axes: Blender is Z-up with the figure facing -Y; glTF/Three.js is Y-up facing +Z. Three (x, y, z) = Blender (x, z, -y).
+for n, o in parts.items():              # mesh parts get a prefix, so joint names stay exactly the runtime's
+    o.name = "part_" + n
+JOINTS = {   # name: (location in Blender coordinates, parent)
+    "root": ((0, 0, 0), None), "hop": ((0, 0, 0.08), "root"), "body": ((0, 0, 0.08), "hop"), "head": ((0, 0, 0.72), "body"),
+    "shoulder_L": ((0.19, 0, 0.6), "body"), "elbow_L": ((0.19, 0, 0.4), "shoulder_L"), "hand_L": ((0.19, 0, 0.21), "elbow_L"),
+    "shoulder_R": ((-0.19, 0, 0.6), "body"), "elbow_R": ((-0.19, 0, 0.4), "shoulder_R"), "hand_R": ((-0.19, 0, 0.21), "elbow_R"),
+}
+J = {}
+for name, (loc, parent) in JOINTS.items():
+    e = link(bpy.data.objects.new(name, None)); e.empty_display_size = 0.05
+    e.location = loc
+    if parent:
+        e.parent = J[parent]; e.location = tuple(l - p for l, p in zip(loc, JOINTS[parent][0]))   # local to the parent pivot
+    e.rotation_mode = "XYZ"
+    J[name] = e
+J["root"].name = "researcher"; J["researcher"] = J.pop("root")       # the figure's top node carries its name
+bpy.context.view_layer.update()
 
-owner = {"base": "root", "rim": "root", "body": "body", "band": "body", "head": "head", "hair": "head",
+owner = {"base": "researcher", "rim": "researcher", "body": "body", "band": "body", "head": "head", "hair": "head",
          "eye0": "head", "eye1": "head", "lens0": "head", "lens1": "head"}
 for side in "LR":
-    owner[f"upper.{side}"] = f"shoulder.{side}"; owner[f"fore.{side}"] = f"elbow.{side}"; owner[f"mitten.{side}"] = f"elbow.{side}"
+    owner[f"upper.{side}"] = f"shoulder_{side}"; owner[f"fore.{side}"] = f"elbow_{side}"; owner[f"mitten.{side}"] = f"hand_{side}"
 for name, o in parts.items():
     mw = o.matrix_world.copy()
-    o.parent = rig; o.parent_type = "BONE"; o.parent_bone = owner[name]
-    bpy.context.view_layer.update()
+    o.parent = J[owner[name]]; o.matrix_parent_inverse = J[owner[name]].matrix_world.inverted()
     o.matrix_world = mw                                   # keep it where it was built
 step("rig")
 
-# ---------------------------------------------------------------- actions (animation clips) keyed from code
-def key(action_name, frames):
-    """frames: [(frame, {bone: (rx, ry, rz) degrees | ('loc', (x, y, z))})]"""
-    act = bpy.data.actions.new(action_name)
-    rig.animation_data_create(); rig.animation_data.action = act
-    for f, pose in frames:
-        for bname, v in pose.items():
-            pb = rig.pose.bones[bname]
-            if isinstance(v, tuple) and v and v[0] == "loc":
-                pb.location = v[1]; pb.keyframe_insert("location", frame=f)
-            else:
-                pb.rotation_mode = "XYZ"; pb.rotation_euler = tuple(math.radians(a) for a in v); pb.keyframe_insert("rotation_euler", frame=f)
-    act.use_fake_user = True
-    return act
+# ---------------------------------------------------------------- clips keyed in Blender (for motions too intricate to script)
+# The runtime's joint values map onto Blender rotations as: swing forward s -> rot X = -s; raise sideways r -> rot Y =
+# -(side * r) with side L = +1, R = -1; elbow bend e -> rot X = -e. (Three.js sets the same joints directly:
+# rotation.x = -s, rotation.z = side * r.)
+def key_clip(clip, frames):
+    """frames: [(frame, {joint: (rx, ry, rz) in degrees, Blender axes})]; one NLA track per joint, named after the clip."""
+    for jn in {j for _, pose in frames for j in pose}:
+        ob = J[jn]; ob.animation_data_create()
+        act = bpy.data.actions.new(f"{clip}_{jn}"); ob.animation_data.action = act
+        for f, pose in frames:
+            if jn in pose:
+                ob.rotation_euler = tuple(math.radians(v) for v in pose[jn]); ob.keyframe_insert("rotation_euler", frame=f)
+        tr = ob.animation_data.nla_tracks.new(); tr.name = clip       # same track name on every joint: one glTF animation
+        tr.strips.new(clip, 1, act); ob.animation_data.action = None
 
-rest = {"shoulder.R": (0, 0, 0), "elbow.R": (0, 0, 0), "head": (0, 0, 0), "body": (0, 0, 0)}
-idle = key("idle", [(1, rest), (30, {**rest, "head": (4, 0, 3), "body": (2, 0, 0)}), (60, rest)])
-wave = key("wave", [
+R = -1                                                   # the right arm's side
+raise_R = lambda r: (0, -math.degrees(R * math.radians(r)) * 1, 0)   # degrees in, Blender (rx, ry, rz) out
+rest = {"shoulder_R": (0, 0, 0), "elbow_R": (0, 0, 0), "head": (0, 0, 0), "body": (0, 0, 0)}
+key_clip("idle", [(1, rest), (30, {**rest, "head": (-4, 3, 0), "body": (2, 0, 0)}), (60, rest)])
+up = raise_R(140)                                        # the arm raised sideways, outward
+key_clip("wave", [
     (1, rest),
-    (8, {**rest, "shoulder.R": (0, 0, -150), "elbow.R": (0, 0, -20), "head": (0, 0, -6)}),
-    (14, {**rest, "shoulder.R": (0, 0, -150), "elbow.R": (0, 0, -55), "head": (0, 0, -6)}),
-    (20, {**rest, "shoulder.R": (0, 0, -150), "elbow.R": (0, 0, -15), "head": (0, 0, -6)}),
-    (26, {**rest, "shoulder.R": (0, 0, -150), "elbow.R": (0, 0, -55), "head": (0, 0, -6)}),
+    (8, {**rest, "shoulder_R": up, "elbow_R": (-15, 0, 0), "head": (0, -6, 0)}),
+    (14, {**rest, "shoulder_R": up, "elbow_R": (-15, 0, 35), "head": (0, -6, 0)}),
+    (20, {**rest, "shoulder_R": up, "elbow_R": (-15, 0, -10), "head": (0, -6, 0)}),
+    (26, {**rest, "shoulder_R": up, "elbow_R": (-15, 0, 35), "head": (0, -6, 0)}),
     (36, rest),
 ])
-for act in (idle, wave):                          # each clip becomes its own NLA track, so the GLB carries both
-    tr = rig.animation_data.nla_tracks.new(); tr.name = act.name
-    tr.strips.new(act.name, 1, act)
-rig.animation_data.action = None
 step("actions")
 
 # ---------------------------------------------------------------- lights and a static floor patch with a prop
@@ -225,16 +228,23 @@ def select_only(objs):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
 
-# (a) ambient occlusion into each figurine part's colour attribute: soft contact shading that travels with the part
-for o in parts.values():
+# (a) ambient occlusion into the colour attribute of the parts that never move against each other (base, body,
+# head and what is fixed to them). Moving parts (arms) are left out: shading baked against the body at rest would stay
+# dark when the arm is raised. A short AO distance keeps it to contact shading.
+world.light_settings.distance = 0.15
+fixed = {k: o for k, o in parts.items() if not k.split(".")[0] in ("upper", "fore", "mitten")}
+for k, o in parts.items():                 # moving parts keep plain copies of their materials (no AO input)
+    if k not in fixed:
+        o.material_slots[0].material = o.material_slots[0].material.copy()
+for o in fixed.values():
     o.data.color_attributes.new("ao", "BYTE_COLOR", "POINT")
     o.data.color_attributes.active_color = o.data.color_attributes["ao"]
-select_only(list(parts.values()))
+select_only(list(fixed.values()))
 t = time.time()
 bpy.ops.object.bake(type="AO", target="VERTEX_COLORS")
 report["ao_bake_s"] = round(time.time() - t, 2)
 # the baked AO multiplies the base colour (so the exporter writes it as COLOR_0 and Three.js uses it)
-for m in {s.material for o in parts.values() for s in o.material_slots}:
+for m in {s.material for o in fixed.values() for s in o.material_slots}:
     nt = m.node_tree; bsdf = nt.nodes["Principled BSDF"]
     attr = nt.nodes.new("ShaderNodeVertexColor"); attr.layer_name = "ao"
     mix = nt.nodes.new("ShaderNodeMix"); mix.data_type = "RGBA"; mix.blend_type = "MULTIPLY"; mix.inputs["Factor"].default_value = 1.0

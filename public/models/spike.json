@@ -6,13 +6,13 @@
   "rig": 0.09,
   "actions": 0.09,
   "set": 0.09,
-  "bake_ao": 0.41,
-  "bake_light": 5.32,
-  "export": 5.48
+  "bake_ao": 0.27,
+  "bake_light": 5.01,
+  "export": 5.17
  },
- "ao_bake_s": 0.32,
- "light_bake_s": 4.86,
- "export_s": 0.15,
- "glb_bytes": 899260,
- "total_s": 5.48
+ "ao_bake_s": 0.18,
+ "light_bake_s": 4.71,
+ "export_s": 0.17,
+ "glb_bytes": 848676,
+ "total_s": 5.17
 }

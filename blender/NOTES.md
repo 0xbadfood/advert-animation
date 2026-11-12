@@ -32,15 +32,22 @@ blender -b --factory-startup -P blender/spike.py -- --out public/models/spike.gl
 
 ## Terms used in this project
 
-- **Armature**: the skeleton object; **bones** are its joints. Our figurines are rigid toys, so each part (body,
-  head, upper arm...) is parented to one bone. There is no skin to bend and no weight painting.
-- **Action**: a named animation clip on the armature (keyframes on bone rotations). Each action is placed on its
-  own **NLA track** so the GLB carries all of them (`export_nla_strips=True`).
+- **Empty**: an invisible object that is only a position and a rotation. Our joints are empties with no rest
+  rotation, placed at the pivots and named like the runtime's joints (`researcher > hop > body > head`;
+  `body > shoulder_L > elbow_L > hand_L`, same for `_R`). The rigid parts (body, head, upper arm...) hang from them.
+- **Armature / bones**: Blender's skeleton. **Not used**: a bone's axes follow the bone, so the first spike's
+  "raise the arm" turned the wrong way. Figurines are rigid toys, so a skeleton gains nothing (no skin to bend, no
+  weight painting).
+- **Action**: a named animation clip (keyframes on rotations). Keyed per joint and placed on an **NLA track** named
+  after the clip on every joint, so the exporter merges them into one glTF animation per clip
+  (`export_nla_strips=True`).
 - **Bake**: Cycles computes lighting once and writes it into a texture (or into per-vertex colours), so the browser
   shows soft shadows without computing them.
 - **AO (ambient occlusion)**: the soft darkening where parts meet (base under body, chin under head). Baked into a
   colour attribute named `ao` and multiplied into the base colour, so it arrives in glTF as `COLOR_0` and Three.js
-  applies it.
+  applies it. **Only for parts that never move against each other** (base, body, head and what is fixed to them),
+  with a short reach (`world.light_settings.distance = 0.15`). Moving parts (arms) are left out and get their own
+  material copies: baked against the body at rest, they came out nearly black and stayed dark when raised.
 - **Lathe**: a shape made by spinning a profile around an axis (`bmesh.ops.spin`): how a turned figurine body is
   made.
 
@@ -58,15 +65,19 @@ The spike GLB is 0.9 MB: one figurine with 16 parts, a skeleton, 2 clips and a 1
 - `COLOR_0` on all 16 part meshes (the baked AO);
 - the baked floor as an emissive texture.
 
-## Open items found by the spike
+## Axes and the runtime mapping (settled)
 
-1. **Bone axes.** A bone's own axes follow the bone (Y along it), so for a bone pointing down, "raise the arm
-   sideways" is not the world axis the keys assumed: the spike's wave swings the wrong way. Settle a convention
-   (bone roll set in code, so local X is forward-swing and local Z is raise for both arms), then map the runtime's
-   joint values `s / r / e` onto it.
-2. **Baked surfaces under tone mapping.** The emissive floor reads flat and washed-out under ACES. On load, give
-   baked surfaces an unlit material with `toneMapped: false`.
-3. **Where the motion lives.** The bone names arrive intact, so the runtime's existing pose library and beats
-   (`src/world/figure.js`, the stations) can drive the Blender figurine's bones directly. Proposal: keep the motion
-   in the runtime (one place, already tuned by the emulator); Blender makes the figurines, materials and bakes,
-   plus hand-keyed clips only for motions too intricate to script.
+Blender is Z-up with the figure facing -Y; glTF and Three.js are Y-up facing +Z. Three `(x, y, z)` = Blender
+`(x, z, -y)`, and the exporter converts. The runtime sets joints exactly as on the greybox (`src/world/figure.js`
+`apply`): `shoulder.rotation.order = "ZXY"`, `rotation.x = -s` (swing forward), `rotation.z = side * r` (raise
+sideways, side L = +1, R = -1), `elbow.rotation.x = -e`, `head.rotation = (nod, turn, tilt)`, `body.rotation =
+(lean, 0, side)`. For a clip keyed in Blender the same values are: rot X = -s, rot Y = -(side * r), elbow rot X = -e.
+Checked in `spike.html`: the Blender-keyed wave and the code-driven wave, cheer and point all match.
+
+## Open items
+
+1. **Baked surfaces under tone mapping.** Handled in the spike page: a surface with a baked emissive map is swapped
+   for an unlit `MeshBasicMaterial` with `toneMapped: false`. Move this into the runtime's loader.
+2. **Where the motion lives (settled with the spike).** The runtime's pose library and beats drive the Blender
+   figurine's joints directly. Blender makes the figurines, materials and bakes, plus hand-keyed clips only for
+   motions too intricate to script.
