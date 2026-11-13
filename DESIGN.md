@@ -329,3 +329,19 @@ lands on.
 - The intro before the first event (it shows "Usually about 9 min").
 - Whether to show a voice preview (the rules allow a waveform only).
 - The copy for a failed run, which is the pipeline owner's call.
+
+## 10. The intake page (2026-11-13)
+
+adtwist's form is the dev engine (a URL and notes), so the user asked for a polished intake before the process film.
+The film shows the exact process a user follows, starting here.
+
+**The page** (`intake.html`, `src/intake/`):
+- Six steps: sources (Instagram first), offer, audience and language, photos, about you, where to send the film.
+- Research starts on the first usable source. A side panel shows the business coming back while the rest is
+  answered: their site, name, logo, colours, facts.
+- An English/Hinglish switch changes the copy.
+
+**The mock.** It replays a finished film's real research: Tweaklogic, 17d6c3a8ff, the film planned for the process
+film. "Make my film" lands on the progress page after research.
+
+**Contract and reasons for the pipeline:** `HANDOVER.md`.

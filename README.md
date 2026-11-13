@@ -1,7 +1,7 @@
 # advert-animation
 
 The live story for the advert pipeline: a figurine studio that plays the pipeline's progress as it happens, with
-fixed, code-owned motion and slots that fill with the run's real artifacts. Design: `DESIGN.md`.
+fixed, code-owned motion and slots that fill with the run's real artifacts. Design: `DESIGN.md`. For the pipeline owner: `HANDOVER.md` (why the intake exists, what both pages need).
 
 ```bash
 source ~/.nvm/nvm.sh && npm install
@@ -14,7 +14,8 @@ blender -b --factory-startup -P blender/set.py -- --out public/models/set.glb   
 blender -b --factory-startup -P blender/props.py -- --out public/models/props.glb # the station props (~2 s)
 ```
 
-Pages: `/live.html` the live progress page (the primary view: estimate, six steps, finished pieces; desktop and
+Pages: `/intake.html` the intake (where a business owner gives their Instagram, website, offer…; research starts as
+they type; `?research=<s>&lang=hinglish`), `/live.html` the live progress page (the primary view: estimate, six steps, finished pieces; desktop and
 phone, `?film=<id>&profile=local|cloud&view=desk|phone&fail=<stage>&retry=1`), `/` the studio emulator (`?greybox=1` for the primitive figures), `/cast.html` the cast lineup cycling the pose
 library (`?pose=<name>` holds one), `/spike.html` the Blender spike. Blender notes: `blender/NOTES.md`.
 
@@ -24,6 +25,7 @@ library (`?pose=<name>` holds one), `/spike.html` the Blender spike. Blender not
 | `src/world/` | Three.js studio, figurines (greybox, the Blender rig's joint layout), slots (live canvas textures), painters |
 | `src/stations/` | the seven stations: their set, slots, figures, and per stage `enter`, `beats`, `react`, `exit`, `apply` |
 | `src/emulator/` | the source: scenario → signals (`synth.js`), dummy and uploaded artifacts (`dummy.js`), checks (`metrics.js`) |
+| `src/intake/` | the intake page: `copy.js` (English and Hinglish), `sources.js` (tidy what people type), `backend.js` (the pipeline contract and its mock), `main.js` |
 | `src/live/` | the live page: `steps.js` (six steps), `estimate.js` (time left, priors from `tools/priors.py`), `model.js` (events → state), `view.js` (DOM, one layout by container queries), `adapter.js` (a film bundle as URLs) |
 | `scenarios/` | dummy presets from the measured timings (offline, for the smoke tests) |
 | `server/api.js` | Vite plugin: the access key (`.api_key`, or ADANIME_API_KEY; /login sets a cookie; scripts send `X-API-Key`), `/api/films`, `/api/films/<id>`, `/files/<id>/<path>` (whitelisted) |
