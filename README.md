@@ -7,13 +7,15 @@ fixed, code-owned motion and slots that fill with the run's real artifacts. Desi
 source ~/.nvm/nvm.sh && npm install
 npm run dev                                   # the emulator on http://localhost:5190
 ~/advert/.venv/bin/python tools/smoke.py      # every preset headless: the checks, exit 1 on a problem
+~/advert/.venv/bin/python tools/priors.py     # refresh the estimate's stage lengths from recorded runs
 ~/advert/.venv/bin/python tools/smoke.py --only cloud-fast --shots 0.1,0.5,0.97   # plus screenshots in out/smoke/
 blender -b --factory-startup -P blender/cast.py -- --out public/models/cast      # rebuild the seven figurines (~7 s)
 blender -b --factory-startup -P blender/set.py -- --out public/models/set.glb     # the set dressing (~9 s)
 blender -b --factory-startup -P blender/props.py -- --out public/models/props.glb # the station props (~2 s)
 ```
 
-Pages: `/` the emulator (`?greybox=1` for the primitive figures), `/cast.html` the cast lineup cycling the pose
+Pages: `/live.html` the live progress page (the primary view: estimate, six steps, finished pieces; desktop and
+phone, `?film=<id>&profile=local|cloud&view=desk|phone&fail=<stage>&retry=1`), `/` the studio emulator (`?greybox=1` for the primitive figures), `/cast.html` the cast lineup cycling the pose
 library (`?pose=<name>` holds one), `/spike.html` the Blender spike. Blender notes: `blender/NOTES.md`.
 
 | path | what |
@@ -22,6 +24,7 @@ library (`?pose=<name>` holds one), `/spike.html` the Blender spike. Blender not
 | `src/world/` | Three.js studio, figurines (greybox, the Blender rig's joint layout), slots (live canvas textures), painters |
 | `src/stations/` | the seven stations: their set, slots, figures, and per stage `enter`, `beats`, `react`, `exit`, `apply` |
 | `src/emulator/` | the source: scenario → signals (`synth.js`), dummy and uploaded artifacts (`dummy.js`), checks (`metrics.js`) |
+| `src/live/` | the live page: `steps.js` (six steps), `estimate.js` (time left, priors from `tools/priors.py`), `model.js` (events → state), `view.js` (DOM, one layout by container queries), `adapter.js` (a film bundle as URLs) |
 | `scenarios/` | dummy presets from the measured timings (offline, for the smoke tests) |
 | `server/api.js` | Vite plugin: the access key (`.api_key`, or ADANIME_API_KEY; /login sets a cookie; scripts send `X-API-Key`), `/api/films`, `/api/films/<id>`, `/files/<id>/<path>` (whitelisted) |
 | `tools/bundle.py` | a finished ~/advert film as a story bundle: only what the story may show (hook lines, pick name, counts, seconds, screenshots, colours, fact cards via advert's `story_facts`, stills, voice, the ad), plus its recorded stage timing |

@@ -7,6 +7,7 @@ import { cardFor, StatusTracker } from "./story/narration.js";
 import { STATION_OF } from "./story/stages.js";
 import { STAGES } from "./story/stages.js";
 import { LIMITS } from "./emulator/metrics.js";
+import { SLIDERS, MEDIAN, baseFor, cloudScale, secondsOf, scenarioFor } from "./emulator/timing.js";
 
 // The emulator page: the story canvas on top; below it, pick a finished advert film and set each stage's length.
 // Play runs the emulator, which sends that run's signals and its real artifacts to the canvas at the set times.
@@ -40,13 +41,6 @@ const emu = new Emulator(views, {
 window.__emu = emu;
 
 // ---------------------------------------------------------------- stage lengths: a base per stage, a slider scales it
-const SLIDERS = [
-  ["research", "Research"], ["truths", "Angles"], ["concepts", "Opening lines"], ["judge", "Weighing"],
-  ["direction", "Direction"], ["audio", "Voice"], ["visuals", "Pictures"], ["render", "Final cut"],
-];
-// medians of the recorded GB10 runs, for stages a film has no recording of; and the cloud targets (DESIGN.md section 2)
-const MEDIAN = { research: 60, truths: 45, concepts: 22, judge: 10, direction: 35, audio: 28, visuals: 150, render: 160 };
-const CLOUD = { visuals: (clips) => (clips ? 100 : 18), render: () => 45 };
 const COLORS = { arrive: "#c9c0f0", research: "#7cc4ff", truths: "#ffd36e", concepts: "#ffb07c", judge: "#ff9db5", pick: "#2bb673", direction: "#b49cff", audio: "#7ce0d8", visuals: "#7ee0a1", render: "#e7a6ff", done: "#ffc857" };
 
 let run = null;                        // the loaded film (real.js), or null for generated dummies
@@ -54,13 +48,7 @@ let base = { ...MEDIAN }, recordedFrom = {};
 const scale = Object.fromEntries(SLIDERS.map(([s]) => [s, 1]));
 let sc = null;                         // the scenario handed to the emulator (durations from base x scale)
 
-function scenarioFor() {
-  const d = clone(PRESETS["local-typical"]);
-  d.name = run ? run.bundle.film : "dummy"; d.language = run ? run.bundle.language : d.language;
-  d.policy = { hooks: "line", pick: "name" }; d.start = "digest"; d.fail = null; d.newEvents = true;
-  for (const [s] of SLIDERS) d.stages[s].duration = Math.max(1, Math.round(base[s] * scale[s] * 2) / 2);
-  return d;
-}
+const scenarioNow = () => scenarioFor(PRESETS["local-typical"], run && run.bundle, base, scale);
 
 function buildSliders() {
   const box = $("#sliders"); box.innerHTML = "";
@@ -69,7 +57,7 @@ function buildSliders() {
     row.innerHTML = `<label><span class="dot" style="background:${COLORS[s]}"></span>${label}</label><input type="range" min="-2" max="2" step="0.05" value="${Math.log2(scale[s])}"><div class="val"></div>`;
     const input = row.querySelector("input"), val = row.querySelector(".val");
     const show = () => {
-      const secs = Math.max(1, Math.round(base[s] * scale[s] * 2) / 2);
+      const secs = secondsOf(base, scale, s);
       val.innerHTML = `<b>${secs} s</b> <span>×${scale[s].toFixed(2)} of ${Math.round(base[s])} s ${recordedFrom[s] ? "real" : "median"}</span>`;
     };
     input.oninput = () => { scale[s] = Math.pow(2, +input.value); show(); };
@@ -80,7 +68,7 @@ function buildSliders() {
 
 function rebuild(at = null) {
   const t = at ?? (emu.player ? emu.t : 0), playing = emu.playing;
-  sc = scenarioFor();
+  sc = scenarioNow();
   emu.load(sc, {}, run);
   emu.seek(Math.min(t, emu.end));
   emu.playing = playing && at === null;
@@ -89,9 +77,7 @@ function rebuild(at = null) {
 
 $("#pReal").onclick = () => { for (const [s] of SLIDERS) scale[s] = 1; buildSliders(); rebuild(); };
 $("#pCloud").onclick = () => {
-  for (const [s] of SLIDERS) scale[s] = 1;
-  const clips = run ? run.bundle.visuals.clips.length : 0;
-  for (const [s, f] of Object.entries(CLOUD)) scale[s] = Math.min(4, Math.max(0.25, f(clips) / base[s]));
+  Object.assign(scale, cloudScale(base, run ? run.bundle.visuals.clips.length : 0));
   buildSliders(); rebuild();
 };
 
@@ -110,10 +96,7 @@ async function pick(id) {
     else run = await loadFilm(id, (what) => ($("#loading").textContent = `loading the film: ${what}…`));
   } catch (err) { $("#loading").textContent = "could not load: " + err.message; return; }
   document.body.classList.remove("loading");
-  const rec = run && run.bundle.recorded ? run.bundle.recorded.stages : {};
-  base = { ...MEDIAN }; recordedFrom = {};
-  for (const [s] of SLIDERS) if (rec[s]) { base[s] = rec[s]; recordedFrom[s] = true; }
-  if (run && !rec.visuals) base.visuals = run.bundle.visuals.clips.length ? 150 : 110;
+  ({ base, recordedFrom } = baseFor(run && run.bundle));
   for (const [s] of SLIDERS) scale[s] = 1;
   const b = run && run.bundle;
   $("#filmInfo").innerHTML = b

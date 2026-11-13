@@ -254,3 +254,78 @@ Findings so far (greybox, 2026-11-12):
      and preloading during the intake form.
 5. **The new pipeline events in `~/advert`**, where the emulator shows the blind waits hurt.
 6. **Wire into the story page** as the default renderer behind the existing `LiveSource`.
+
+## 9. The live page: estimate, steps, finished pieces (2026-11-13)
+
+Close-circle feedback on the studio:
+- Users want a general estimate of how long the run takes.
+- They want a more professional look.
+- For an Indian audience a phone interface is a must; an estimate plus finished pieces sliding in can stand in for
+  the animation.
+
+The user's decision: one professional page that works on both desktop and phone. It has explainer cards, the
+estimate, "step 3 of 6", and room for the incoming pieces. Only the placement changes between the two. This page is
+now the primary progress view. The 3D studio stays as an optional desktop view and as ad material.
+
+**Page:** `/live.html` (the emulator harness), with code in `src/live/`.
+- **Header:** "Step n of 6", the time left, and a six-part rail. The current part fills with the step's progress.
+- **Explainer card:** the step's title, a plain explanation, the live status line (the studio's `StatusTracker`), and
+  a rotating "what's happening now" line that keeps a long step alive. The rotating lines say what the step does,
+  never what it found.
+- **Feed:** the finished pieces, newest first. Each one enters once and then updates in place: site captures, brand
+  colours and logo, facts and market, angle count, opening lines, comparisons, the chosen idea with the honest line,
+  the scene strip, voice waveforms, pictures, the film.
+- **Placement:** container queries, so the emulator's phone frame previews the phone layout. Under 860 px: a sticky
+  thin header, then the card, then the feed. Wider: the card stays in view on the left and the feed fills the right.
+- **Tab title:** carries the step and the time left. It is the first of the come-back cues.
+
+**Six steps** (`steps.js`). They group the engine stages and change nothing in the engine contract:
+
+| # | Step | Engine stages |
+|---|---|---|
+| 1 | Getting to know your business | arrive, research |
+| 2 | Finding ideas | truths, concepts |
+| 3 | Choosing one idea | judge, pick |
+| 4 | Planning the scenes | direction |
+| 5 | Voice and pictures | audio, visuals |
+| 6 | Cutting your film | render |
+
+**Estimate** (`estimate.js`, priors in `priors.json` from `tools/priors.py`):
+- **Priors:** each stage has a median (mid) and a long-but-normal length (hi, the 80th percentile and at least 1.25 x
+  the median), measured from every run that recorded its events. Today that is 14 runs.
+- **Remaining time:** what is left of the current stage, plus the later stages.
+- **Current stage:** comes from its prior. It is refined by the stage's own reported progress (comparisons, voice
+  lines, truths and render percent): elapsed x (1-f)/f, weighted by f.
+- **Pictures have no progress fraction:** moving clips follow the stills in unknown numbers, so a picture count would
+  claim the stage nearly done too early.
+- **The shown number never jumps:**
+  - It counts down with the clock.
+  - It follows a lower target quickly.
+  - It rises at most 0.25 s per second.
+  - A range shows when the spread is a minute or more.
+  - "Taking a little longer than usual" shows once the stage passes its hi.
+- **Cloud profile:** local numbers, except pictures (75/110 s) and render (40/55 s). These are guesses until cloud
+  runs exist.
+- **Measured against the films** (`window.__trace()`):
+  - Normal runs: within about 20–70 s locally and 35 s on cloud, inside the shown range throughout.
+  - An outlier run (6 min of direction) is underestimated, and shows the slow note.
+
+**Model and view.**
+- `model.js` reduces events into state. It is DOM-free and driven by `feed(job, e, t)` and `tick(t)`.
+- `view.js` draws it. `catchup` replays a log without entrances, for a reload or the email link (principle 5).
+- **Retries:** a retry drops the pieces of the attempt that failed.
+- **Failures:** a failure never moves the step forward, and it tints the status.
+- `adapter.js` serves a film bundle as URLs, with nothing preloaded. Voice waveforms are decoded offline, and a
+  plausible one is drawn until they are ready. The portal's adapter must have the same `resolve(job, e, cb)` shape.
+
+**Safari rule (found 2026-11-13):** never rewrite a clickable element's text on every frame. Safari 26 drops the
+click when the press and the release land on different text nodes, so Play never fired. Write only on change (the
+`text()` and `setText()` helpers). The emulator's `?debug=1` shows the loop's numbers and the element each press
+lands on.
+
+**Open:**
+- A notification when the film is done (needs permission).
+- An email-link landing.
+- The intro before the first event (it shows "Usually about 9 min").
+- Whether to show a voice preview (the rules allow a waveform only).
+- The copy for a failed run, which is the pipeline owner's call.
